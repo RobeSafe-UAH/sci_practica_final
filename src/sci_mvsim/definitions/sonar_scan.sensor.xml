@@ -1,0 +1,22 @@
+<!--
+  SPDX-License-Identifier: Apache-2.0
+  SCI geometric sonar approximation. Each emitter has its own ray origin.
+  The ROS bridge reduces this independent LaserScan to sensor_msgs/Range.
+  This models cone geometry and range noise, not acoustic propagation.
+-->
+<sensor class="laser" name="${sensor_name|sonar0_scan}">
+  <pose_3d>${sensor_x|0.46} ${sensor_y|0.0} ${sonar_z|0.10} ${sensor_yaw|0.0} 0 0</pose_3d>
+  <fov_degrees>${sonar_fov_degrees|15.0}</fov_degrees>
+  <sensor_period>${sonar_period|0.05}</sensor_period>
+  <nrays>${sonar_nrays|11}</nrays>
+  <min_range>${sonar_min_range|0.04}</min_range>
+  <max_range>${sonar_max_range|5.0}</max_range>
+  <range_std_noise>${sonar_noise_std|0.005}</range_std_noise>
+  <angle_std_noise_deg>0.0</angle_std_noise_deg>
+  <raytrace_3d>false</raytrace_3d>
+  <visual enabled="false"/>
+  <publish enabled="false"/>
+  <viz_visiblePoints>false</viz_visiblePoints>
+  <viz_visiblePlane>false</viz_visiblePlane>
+  <viz_visibleLines>false</viz_visibleLines>
+</sensor>

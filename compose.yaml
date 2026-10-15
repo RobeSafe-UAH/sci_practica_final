@@ -1,0 +1,28 @@
+name: sci-practica-final
+
+services:
+  simulator:
+    image: sci-practica-final:jazzy
+    build:
+      context: .
+    # DDS uses dynamic UDP ports. Docker Desktop requires host networking enabled.
+    network_mode: host
+    init: true
+    shm_size: 256m
+    stop_grace_period: 15s
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-42}
+      ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-SUBNET}
+      ROS_STATIC_PEERS: ${ROS_STATIC_PEERS:-}
+      SCI_VNC_PORT: ${SCI_VNC_PORT:-6080}
+      SCI_HEADLESS: ${SCI_HEADLESS:-false}
+      SCI_SCREEN_WIDTH: ${SCI_SCREEN_WIDTH:-1280}
+      SCI_SCREEN_HEIGHT: ${SCI_SCREEN_HEIGHT:-800}
+    volumes:
+      - ./config:/opt/sci/config:ro
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

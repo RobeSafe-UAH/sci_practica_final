@@ -1,0 +1,15 @@
+<!-- SPDX-License-Identifier: Apache-2.0
+     SCI slow car footprint, animated by native MVSim keyframes in world.xml.
+     A static body follows the animation and remains solid to ego and sensors.
+     The origin matches the ego's rear axle, so its footprint is comparable. -->
+<block:class name="sci_traffic">
+  <static>true</static>
+  <intangible>false</intangible>
+  <mass>3.5</mass>
+  <zmin>0.03</zmin><zmax>0.24</zmax>
+  <color>#ff9020</color>
+  <shape>
+    <pt>0.45 0.15</pt><pt>0.45 -0.15</pt>
+    <pt>-0.13 -0.15</pt><pt>-0.13 0.15</pt>
+  </shape>
+</block:class>

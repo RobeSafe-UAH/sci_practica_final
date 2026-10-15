@@ -1,0 +1,15 @@
+SCI: entorno de la práctica final
+
+Este proyecto deriva de la integración de MVSim de RobeSafe-UAH/rbsf-racing,
+distribuida bajo Apache License 2.0:
+https://github.com/RobeSafe-UAH/rbsf-racing
+Referencia: 79a61ea7c14172b5bd736b0447b58c75da19c7af.
+
+Se adapta la geometría del coche F1TENTH, el sensor Hokuyo, la generación del
+mundo y el patrón de adaptación de mensajes ROS 2. Los archivos derivados
+identifican su procedencia y sus modificaciones. El escenario elíptico,
+el tráfico animado, los sonares y la interfaz de la práctica son específicos
+de este entorno.
+
+La copia de rbsf-racing se usa como origen del código; no es necesaria para
+construir ni ejecutar este entorno.

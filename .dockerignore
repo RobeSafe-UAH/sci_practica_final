@@ -1,0 +1,17 @@
+.git
+.env
+.venv
+__pycache__
+*.py[cod]
+.pytest_cache
+build
+install
+log
+**/build
+**/install
+**/log
+**/__pycache__
+**/.pytest_cache
+*.bag
+*.db3
+*.mcap
