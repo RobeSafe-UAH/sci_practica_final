@@ -139,7 +139,6 @@ def make_bridge_class():
             self.sonar_max = float(sonar['max_range'])
             sonar_distance([], self.sonar_min, self.sonar_max)
             self.sonar_fov = math.radians(float(sonar['fov_degrees']))
-            self.sonar_variance = float(sonar.get('noise_std', 0.0)) ** 2
             robot = config['robot']
             self.watchdog = CommandWatchdog(
                 float(robot.get('max_speed', 1.0)), float(robot['wheelbase']),
@@ -222,7 +221,9 @@ def make_bridge_class():
             output.min_range = self.sonar_min
             output.max_range = self.sonar_max
             output.range = sonar_distance(msg.ranges, self.sonar_min, self.sonar_max)
-            output.variance = self.sonar_variance
+            # The minimum of several noisy rays does not retain each ray's
+            # variance; zero denotes an unknown Range variance in ROS.
+            output.variance = 0.0
             self.sonar_pubs[index].publish(output)
 
         def odometry(self, msg):

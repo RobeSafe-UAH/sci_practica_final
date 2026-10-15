@@ -1,12 +1,14 @@
 # Metres, seconds, radians unless a key explicitly ends in _deg.
 # width is the TOTAL road width: two lanes, 1 m per lane, one per direction.
 track:
+  # Dimensions describe the installed asset. Regenerate its files to change the layout.
+  name: sci_ellipse
   semi_major: 7.0
   semi_minor: 4.0
   width: 2.0
   direction: ccw
   wall_thickness: 0.12
-  resolution: 0.05
+  resolution: 0.01
 robot:
   name: r0
   wheelbase: 0.3302

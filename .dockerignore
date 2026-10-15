@@ -15,3 +15,9 @@ log
 *.bag
 *.db3
 *.mcap
+/site/
+.venv-docs
+docs
+.github
+mkdocs.yml
+requirements-docs.txt

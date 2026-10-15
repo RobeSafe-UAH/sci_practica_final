@@ -13,3 +13,18 @@ de este entorno.
 
 La copia de rbsf-racing se usa como origen del código; no es necesaria para
 construir ni ejecutar este entorno.
+
+Aspecto del coche RoboRacer/F1TENTH
+
+Los seis modelos GLB y roboracer_accent.stl de
+src/sci_mvsim/assets/rbsf_racing se copian sin cambios de
+src/base_system/f1tenth_gym_ros/meshes en el mismo repositorio y commit.
+Las poses y correcciones de orientación proceden de
+src/base_system/f1tenth_gym_ros/urdf/racecar_mesh.xacro. Ese paquete declara
+MIT, Copyright (c) 2020 Hongrui Zheng. Se conserva su licencia completa en
+src/sci_mvsim/assets/rbsf_racing/LICENSE y la procedencia en PROVENANCE.md.
+
+Los modelos se cargan directamente en MVSim. Las adaptaciones XML conservan
+la escala F1TENTH y el origen en el eje trasero; asignan azul al coche del
+alumno y naranja al tráfico. La geometría de colisión y la dinámica de MVSim
+se configuran por separado de estos modelos visuales.

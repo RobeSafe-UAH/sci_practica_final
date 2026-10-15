@@ -12,15 +12,16 @@ traffic blocks. Walls contain only thin occupied bands, as in RBSF's outline_map
 from copy import deepcopy
 import csv
 import math
+import os
 from pathlib import Path
 import re
 import shutil
 import xml.etree.ElementTree as ET
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 import yaml
 
-from .geometry import EllipseTrack, wrap_angle
+from .geometry import ClosedPath, EllipseTrack, wrap_angle
 
 
 def _number(section, key, *, positive=False, nonnegative=False, default=None):
@@ -54,6 +55,9 @@ def validate_config(config):
         if not isinstance(config.get(name), dict):
             raise ValueError(f'{name} must be a mapping')
     track, robot, traffic = (config[key] for key in ('track', 'robot', 'traffic'))
+    track.setdefault('name', 'sci_ellipse')
+    if not isinstance(track['name'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', track['name']):
+        raise ValueError('track.name must identify an installed track, without slashes')
     for key in ('semi_major', 'semi_minor', 'width', 'wall_thickness', 'resolution'):
         _number(track, key, positive=True)
     road = EllipseTrack(track['semi_major'], track['semi_minor'],
@@ -138,17 +142,26 @@ def load_config(path):
         return validate_config(yaml.safe_load(handle))
 
 
-def _definitions_directory():
-    source = Path(__file__).resolve().parents[1] / 'definitions'
+def _resource_directory(name):
+    source = Path(__file__).resolve().parents[1] / name
     if source.is_dir():
         return source
     # Keep offline generation/test imports independent of a running ROS installation.
     from ament_index_python.packages import get_package_share_directory
-    return Path(get_package_share_directory('sci_mvsim')) / 'definitions'
+    return Path(get_package_share_directory('sci_mvsim')) / name
 
 
-def _raster_maps(track_config, output):
-    """Draw thin collision walls separately from decorative road/centre-line texture."""
+def generate_track(config, out_dir):
+    """Explicitly create an RBSF-format track asset, never called during simulation.
+
+    The ROS map has a white closed driving corridor and occupied black infield
+    and outside. The CSV uses RBSF's x/y/right-width/left-width format. Runtime
+    applies an outline copy just as rbsf_mvsim does, rather than changing this map.
+    """
+    config = validate_config(config)
+    track_config = config['track']
+    output = Path(out_dir).expanduser().resolve()
+    output.mkdir(parents=True, exist_ok=True)
     road = EllipseTrack(track_config['semi_major'], track_config['semi_minor'],
                         track_config['width'], track_config['direction'])
     resolution = track_config['resolution']
@@ -167,47 +180,140 @@ def _raster_maps(track_config, output):
         return [pixel(road.point_at(math.tau * i / 2048, offset), scale)
                 for i in range(2048)]
 
-    # Only the two wall bands are occupied. Solid occupied infield/outside maps
-    # have a known MVSim 2D-raytracing issue, documented by RBSF's world.py.
-    # Supersample polygon filling, then classify at cell centres. Direct integer
-    # polygon filling can erase the middle of a 2.4-cell wall at diagonal edges.
+    # Classify at cell centres with a small subpixel rasterization error.
     scale = 4
-    occupancy = Image.new('L', (columns * scale, rows * scale), 255)
+    occupancy = Image.new('L', (columns * scale, rows * scale), 0)
     drawing = ImageDraw.Draw(occupancy)
-    for offset, color in ((half_width + thickness, 0), (half_width, 255),
-                          (-half_width, 0), (-half_width - thickness, 255)):
+    for offset, color in ((half_width, 255), (-half_width, 0)):
         drawing.polygon(boundary(offset, scale), fill=color)
     occupancy = occupancy.resize((columns, rows), resample=Image.Resampling.NEAREST)
-    occupancy.save(output / 'walls.png')
-    map_spec = {'image': 'walls.png', 'resolution': resolution,
+    name = track_config['name']
+    occupancy.save(output / f'{name}.png')
+    geometry = {key: track_config[key] for key in ('semi_major', 'semi_minor', 'width', 'direction')}
+    map_spec = {'image': f'{name}.png', 'resolution': resolution,
                 'origin': [*origin, 0.0], 'negate': 0,
-                'occupied_thresh': 0.65, 'free_thresh': 0.196}
-    with (output / 'walls.yaml').open('w', encoding='utf-8') as handle:
+                'occupied_thresh': 0.65, 'free_thresh': 0.196,
+                'centerline': f'{name}_centerline.csv', 'sci_geometry': geometry}
+    with (output / f'{name}.yaml').open('w', encoding='utf-8') as handle:
         yaml.safe_dump(map_spec, handle, sort_keys=False)
+    with (output / f'{name}_centerline.csv').open('w', newline='', encoding='utf-8') as handle:
+        handle.write('# x_m, y_m, w_tr_right_m, w_tr_left_m\n')
+        writer = csv.writer(handle, lineterminator='\n')
+        for point in road.path().points:
+            writer.writerow([f'{point[0]:.9f}', f'{point[1]:.9f}',
+                             f'{half_width:.9f}', f'{half_width:.9f}'])
+    return output / f'{name}.yaml'
 
-    floor = Image.new('RGB', (columns, rows), '#c9d4b2')
+
+def outline_map(map_yaml, out_dir, thickness):
+    """Create MVSim's thin-wall copy with RBSF's four-connected dilation rule."""
+    map_yaml, output = Path(map_yaml), Path(out_dir)
+    spec = yaml.safe_load(map_yaml.read_text(encoding='utf-8'))
+    with Image.open(map_yaml.parent / spec['image']) as source:
+        image = source.convert('L')
+    negate, threshold = int(spec.get('negate', 0)), spec['occupied_thresh']
+    occupied = image.point([255 if (value if negate else 255 - value) / 255 > threshold else 0
+                            for value in range(256)])
+    near_free = ImageChops.invert(occupied)
+    for _ in range(max(1, math.ceil(thickness / spec['resolution']))):
+        grown = near_free.copy()
+        for delta in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            shifted = Image.new('L', image.size, 0)
+            shifted.paste(near_free, delta)
+            grown = ImageChops.lighter(grown, shifted)
+        near_free = grown
+    walls = ImageChops.invert(ImageChops.darker(occupied, near_free))
+    stem = f'{map_yaml.stem}_outline'
+    walls.save(output / f'{stem}.png')
+    spec.update(image=f'{stem}.png', negate=0)
+    if 'centerline' in spec:
+        reference = (map_yaml.parent / spec['centerline']).resolve()
+        spec['centerline'] = os.path.relpath(reference, output.resolve())
+    destination = output / f'{stem}.yaml'
+    destination.write_text(yaml.safe_dump(spec, sort_keys=False), encoding='utf-8')
+    return destination
+
+
+def _track_paths(map_yaml, direction=None):
+    """Use the installed track's centreline and side widths for both legal lanes."""
+    spec = yaml.safe_load(Path(map_yaml).read_text(encoding='utf-8'))
+    points, right_widths, left_widths = [], [], []
+    with (Path(map_yaml).parent / spec['centerline']).open(encoding='utf-8') as handle:
+        for line in handle:
+            if not line.strip() or line.lstrip().startswith('#'):
+                continue
+            x, y, right, left = map(float, line.split(','))
+            if not all(math.isfinite(v) for v in (x, y, right, left)) or min(right, left) <= 0:
+                raise ValueError('track reference must have finite points and positive side widths')
+            points.append((x, y))
+            right_widths.append(right)
+            left_widths.append(left)
+    original_direction = spec['sci_geometry']['direction']
+    if direction is not None and direction != original_direction:
+        # Keep the same starting cross-section while reversing traversal. The
+        # old left side becomes the new right side, including asymmetric widths.
+        points = points[:1] + points[:0:-1]
+        previous_right = right_widths
+        right_widths = left_widths[:1] + left_widths[:0:-1]
+        left_widths = previous_right[:1] + previous_right[:0:-1]
+    center = ClosedPath(points)
+
+    def with_tangents(values):
+        headings = [math.atan2(values[(i + 1) % len(values)][1] - values[i - 1][1],
+                              values[(i + 1) % len(values)][0] - values[i - 1][0])
+                    for i in range(len(values))]
+        return ClosedPath(values, headings)
+
+    center = with_tangents(center.points)
+    right, opposing = [], []
+    for i, (x, y) in enumerate(center.points):
+        yaw = center.headings[i]
+        nx, ny = math.sin(yaw), -math.cos(yaw)
+        right.append((x + nx * right_widths[i] / 2, y + ny * right_widths[i] / 2))
+        opposing.append((x - nx * left_widths[i] / 2, y - ny * left_widths[i] / 2))
+    # Reverse the other lane around the same starting cross-section.
+    opposing = opposing[:1] + opposing[:0:-1]
+    return {'centerline': center, 'right_lane': with_tangents(right),
+            'opposing_lane': with_tangents(opposing)}
+
+
+def _installed_track(config):
+    track = config['track']
+    directory = _resource_directory('tracks') / track['name']
+    path = directory / f'{track["name"]}.yaml'
+    if not path.is_file():
+        raise ValueError(f'installed track is missing: {path}')
+    spec = yaml.safe_load(path.read_text(encoding='utf-8'))
+    geometry = spec.get('sci_geometry', {})
+    if (any(geometry.get(key) != track[key] for key in ('semi_major', 'semi_minor', 'width')) or
+            spec['resolution'] != track['resolution']):
+        raise ValueError('track dimensions are asset metadata; regenerate the track explicitly '
+                         'with python3 -m sci_mvsim.world --generate-track before running')
+    return path
+
+
+def _track_visual(map_yaml, paths, output):
+    """Keep RBSF's white/black occupancy-map appearance and add a grey lane divider."""
+    spec = yaml.safe_load(Path(map_yaml).read_text(encoding='utf-8'))
+    with Image.open(Path(map_yaml).parent / spec['image']) as source:
+        floor = source.convert('RGB')
+    resolution, origin = spec['resolution'], spec['origin']
+
+    def pixel(point):
+        return ((point[0] - origin[0]) / resolution - 0.5,
+                floor.height - 0.5 - (point[1] - origin[1]) / resolution)
+
     floor_drawing = ImageDraw.Draw(floor)
-    # Repaint the occupied bands on the visual floor too: the texture sits
-    # slightly above the grid's flat white map, which would otherwise hide it.
-    for offset, color in ((half_width + thickness, '#20252b'),
-                          (half_width, '#555b63'), (-half_width, '#20252b'),
-                          (-half_width - thickness, '#c9d4b2')):
-        floor_drawing.polygon(boundary(offset), fill=color)
-    edge_width = max(1, round(0.06 / resolution))
-    for offset in (half_width - 0.06, -half_width + 0.06):
-        edge = boundary(offset)
-        floor_drawing.line([*edge, edge[0]], fill='#f5f5f5', width=edge_width)
-    # These pixels are a ground texture, never part of the occupancy map.
-    center = road.path()
+    center = paths['centerline']
     marking_width = max(1, round(0.06 / resolution))
     s = 0.0
     while s < center.length:
         dash = [pixel(center.pose_at(min(s + distance, center.length))[:2])
                 for distance in (0.0, 0.1, 0.2, 0.3, 0.4)]
-        floor_drawing.line(dash, fill='#ffe579', width=marking_width)
+        floor_drawing.line(dash, fill='#808080', width=marking_width)
         s += 0.9
     floor.save(output / 'road_texture.png')
-    return origin, (columns * resolution, rows * resolution)
+    return origin, (floor.width * resolution, floor.height * resolution)
 
 
 def _value(parent, tag, value):
@@ -253,16 +359,23 @@ def build_world(config, out_dir):
     are rendered by a separate ground texture and never alter this wall mask.
     """
     config = validate_config(config)
+    source_track = _installed_track(config)
     output = Path(out_dir).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
     definitions = output / 'definitions'
     definitions.mkdir(exist_ok=True)
-    for source in _definitions_directory().glob('*.xml'):
+    for source in _resource_directory('definitions').glob('*.xml'):
         shutil.copyfile(source, definitions / source.name)
-    origin, size = _raster_maps(config['track'], output)
+    shutil.copytree(_resource_directory('assets'), output / 'assets', dirs_exist_ok=True)
+    track_directory = output / 'tracks' / config['track']['name']
+    shutil.copytree(source_track.parent, track_directory, dirs_exist_ok=True)
+    copied_track = track_directory / source_track.name
+    map_yaml = outline_map(copied_track, output, config['track']['wall_thickness'])
+    paths = _track_paths(copied_track, config['track']['direction'])
+    origin, size = _track_visual(map_yaml, paths, output)
+    right_lane = paths['right_lane']
     track = config['track']
     road = EllipseTrack(track['semi_major'], track['semi_minor'], track['width'], track['direction'])
-    right_lane = road.right_lane()
     world = ET.Element('mvsim_world', version='1.0')
     world.append(ET.Comment(' SCI: one lane per direction; slow traffic follows ego lane. '))
     _value(world, 'simul_timestep', 0.005)
@@ -284,7 +397,7 @@ def build_world(config, out_dir):
                        ('texture_size_x', size[0]), ('texture_size_y', size[1])):
         _value(ground, tag, value)
     grid = ET.SubElement(world, 'element', {'class': 'occupancy_grid'})
-    _value(grid, 'file', output / 'walls.yaml')
+    _value(grid, 'file', map_yaml)
     ET.SubElement(world, 'include', file=str(definitions / 'ackermann.vehicle.xml'),
                   **_vehicle_include_attributes(config))
     ET.SubElement(world, 'include', file=str(definitions / 'traffic.block.xml'))
@@ -297,10 +410,9 @@ def build_world(config, out_dir):
         _value(block, 'init_pose', '0 0 0')
         _traffic_animation(block, right_lane, config['robot']['spawn_s'] + distance,
                            config['traffic']['speed'])
-    for name, path in (('centerline', road.path()), ('right_lane', right_lane),
-                       ('opposing_lane', road.opposing_lane())):
+    for name, path in paths.items():
         with (output / f'{name}.csv').open('w', newline='', encoding='utf-8') as handle:
-            writer = csv.writer(handle)
+            writer = csv.writer(handle, lineterminator='\n')
             writer.writerow(['s_m', 'x_m', 'y_m', 'yaw_rad'])
             samples = math.ceil(path.length / 0.05)
             for i in range(samples):
@@ -310,3 +422,13 @@ def build_world(config, out_dir):
     destination = output / 'world.xml'
     ET.ElementTree(world).write(destination, encoding='utf-8', xml_declaration=True)
     return destination
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Explicitly regenerate the installed SCI track asset')
+    parser.add_argument('--config', required=True, type=Path)
+    parser.add_argument('--generate-track', required=True, type=Path, metavar='OUTPUT_DIRECTORY')
+    arguments = parser.parse_args()
+    print(generate_track(load_config(arguments.config), arguments.generate_track))

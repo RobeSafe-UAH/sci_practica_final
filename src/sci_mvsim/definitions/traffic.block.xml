@@ -1,7 +1,9 @@
 <!-- SPDX-License-Identifier: Apache-2.0
      SCI slow car footprint, animated by native MVSim keyframes in world.xml.
      A static body follows the animation and remains solid to ego and sensors.
-     The origin matches the ego's rear axle, so its footprint is comparable. -->
+     The origin matches the ego's rear axle, so its footprint is comparable.
+     RoboRacer visual meshes and poses derive from f1tenth_gym_ros (MIT);
+     see assets/rbsf_racing/PROVENANCE.md. Visuals do not define the shape. -->
 <block:class name="sci_traffic">
   <static>true</static>
   <intangible>false</intangible>
@@ -12,4 +14,52 @@
     <pt>0.45 0.15</pt><pt>0.45 -0.15</pt>
     <pt>-0.13 -0.15</pt><pt>-0.13 0.15</pt>
   </shape>
+  <visual>
+    <name>roboracer_chassis</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_chassis.glb</model_uri>
+  </visual>
+  <visual>
+    <name>roboracer_accent</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_accent.stl</model_uri>
+    <model_color>#ff9020</model_color>
+  </visual>
+  <visual>
+    <name>roboracer_lidar</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_lidar.glb</model_uri>
+    <model_offset_x>0.266962</model_offset_x>
+    <model_offset_y>0.000249</model_offset_y>
+    <model_offset_z>0.121636</model_offset_z>
+  </visual>
+  <visual>
+    <name>roboracer_wheel_rear_left</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_wheel_rear_left.glb</model_uri>
+    <model_offset_x>-0.000833</model_offset_x>
+    <model_offset_y>0.130772</model_offset_y>
+    <model_offset_z>0.051076</model_offset_z>
+    <model_roll>-2.543</model_roll><model_pitch>-0.005</model_pitch><model_yaw>-0.246</model_yaw>
+  </visual>
+  <visual>
+    <name>roboracer_wheel_rear_right</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_wheel_rear_right.glb</model_uri>
+    <model_offset_x>0.000833</model_offset_x>
+    <model_offset_y>-0.132075</model_offset_y>
+    <model_offset_z>0.050856</model_offset_z>
+    <model_roll>2.932</model_roll><model_pitch>0.007</model_pitch><model_yaw>-0.290</model_yaw>
+  </visual>
+  <visual>
+    <name>roboracer_wheel_front_left</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_wheel_front_left.glb</model_uri>
+    <model_offset_x>0.321733</model_offset_x>
+    <model_offset_y>0.132904</model_offset_y>
+    <model_offset_z>0.051058</model_offset_z>
+    <model_roll>-3.574</model_roll><model_pitch>0.068</model_pitch><model_yaw>2.177</model_yaw>
+  </visual>
+  <visual>
+    <name>roboracer_wheel_front_right</name>
+    <model_uri>${MVSIM_CURRENT_FILE_DIRECTORY}/../assets/rbsf_racing/roboracer_wheel_front_right.glb</model_uri>
+    <model_offset_x>0.320602</model_offset_x>
+    <model_offset_y>-0.131600</model_offset_y>
+    <model_offset_z>0.050883</model_offset_z>
+    <model_roll>1.899</model_roll><model_pitch>-0.046</model_pitch><model_yaw>2.803</model_yaw>
+  </visual>
 </block:class>

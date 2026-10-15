@@ -1,0 +1,15 @@
+image: sci_ellipse.png
+resolution: 0.01
+origin:
+- -9.120000000000001
+- -6.12
+- 0.0
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+centerline: sci_ellipse_centerline.csv
+sci_geometry:
+  semi_major: 7.0
+  semi_minor: 4.0
+  width: 2.0
+  direction: ccw

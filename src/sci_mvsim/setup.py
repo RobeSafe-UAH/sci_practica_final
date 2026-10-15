@@ -12,6 +12,8 @@ setup(
         ('share/sci_mvsim', ['package.xml']),
         ('share/sci_mvsim/launch', glob('launch/*.launch.py')),
         ('share/sci_mvsim/definitions', glob('definitions/*.xml')),
+        ('share/sci_mvsim/assets/rbsf_racing', glob('assets/rbsf_racing/*')),
+        ('share/sci_mvsim/tracks/sci_ellipse', glob('tracks/sci_ellipse/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

@@ -2,16 +2,20 @@
 
 from copy import deepcopy
 import math
+import json
 from pathlib import Path
+import shutil
+import struct
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 
 from PIL import Image
 import yaml
 
 from sci_mvsim.geometry import EllipseTrack, wrap_angle
-from sci_mvsim.world import build_world, load_config, validate_config
+from sci_mvsim.world import build_world, generate_track, load_config, outline_map, validate_config
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -79,7 +83,8 @@ class WorldGenerationTests(unittest.TestCase):
         map_path = Path(self.world.find("element[@class='occupancy_grid']/file").text)
         spec = yaml.safe_load(map_path.read_text(encoding='utf-8'))
         image = Image.open(map_path.parent / spec['image'])
-        self.assertEqual(spec['resolution'], 0.05)
+        self.assertEqual(spec['resolution'], 0.01)
+        self.assertTrue((map_path.parent / spec['centerline']).is_file())
 
         def occupied(x, y):
             column = math.floor((x - spec['origin'][0]) / spec['resolution'])
@@ -107,12 +112,114 @@ class WorldGenerationTests(unittest.TestCase):
         self.assertLess(height, 0.01)
         texture = Image.open(ground.find('texture').text)
         colors = {color for _, color in texture.getcolors()}
-        self.assertTrue({(255, 229, 121), (245, 245, 245), (32, 37, 43)} <= colors)
+        self.assertEqual(colors, {(0, 0, 0), (128, 128, 128), (255, 255, 255)})
         self.assertEqual(len(self.world.findall('block')), 2)
         gui = self.world.find('gui')
         self.assertEqual(float(gui.find('cam_elevation').text), 90.0)
         self.assertEqual(float(gui.find('cam_azimuth').text), -90.0)
         self.assertGreaterEqual(float(gui.find('cam_distance').text), 22.0)
+
+    def test_official_track_has_a_closed_corridor_and_rbsf_reference_format(self):
+        directory = self.directory / 'tracks' / 'sci_ellipse'
+        spec = yaml.safe_load((directory / 'sci_ellipse.yaml').read_text(encoding='utf-8'))
+        self.assertEqual(spec['sci_geometry'],
+                         {'semi_major': 7.0, 'semi_minor': 4.0, 'width': 2.0, 'direction': 'ccw'})
+        with Image.open(directory / spec['image']) as image:
+            # The source map stores filled occupied outside/infield. Only its
+            # runtime outline copy clears those regions for MVSim ray tracing.
+            self.assertEqual(image.getpixel((0, 0)), 0)
+            self.assertEqual(image.getpixel((image.width // 2, image.height // 2)), 0)
+        reference = (directory / spec['centerline']).read_text(encoding='utf-8').splitlines()
+        self.assertIn('w_tr_right_m', reference[0])
+        rows = [tuple(map(float, row.split(','))) for row in reference[1:]]
+        self.assertEqual(len(rows), 4096)
+        self.assertEqual(rows[0], (7.0, 0.0, 1.0, 1.0))
+        self.assertTrue(all(row[2:] == (1.0, 1.0) for row in rows))
+        regeneration = self.directory / 'regenerated'
+        result = generate_track(self.config, regeneration)
+        self.assertEqual(yaml.safe_load(result.read_text(encoding='utf-8')), spec)
+        with Image.open(directory / spec['image']) as original, \
+                Image.open(regeneration / spec['image']) as regenerated:
+            self.assertEqual(original.tobytes(), regenerated.tobytes())
+
+    def test_outline_uses_four_connected_wall_cells_like_rbsf(self):
+        directory = self.directory / 'small_map'
+        directory.mkdir()
+        image = Image.new('L', (9, 9), 0)
+        for y in range(3, 6):
+            for x in range(3, 6):
+                image.putpixel((x, y), 255)
+        image.save(directory / 'room.png')
+        spec = {'image': 'room.png', 'resolution': 0.05, 'origin': [0, 0, 0],
+                'negate': 0, 'occupied_thresh': 0.65, 'free_thresh': 0.196}
+        (directory / 'room.yaml').write_text(yaml.safe_dump(spec), encoding='utf-8')
+        result = outline_map(directory / 'room.yaml', directory, 0.05)
+        outline = yaml.safe_load(result.read_text(encoding='utf-8'))
+        with Image.open(directory / outline['image']) as walls:
+            self.assertEqual(dict((color, count) for count, color in walls.getcolors())[0], 12)
+            self.assertEqual(walls.getpixel((2, 2)), 255)  # diagonal corner is excluded
+
+    def test_visual_resources_work_from_installed_share_without_a_source_checkout(self):
+        share = self.directory / 'installed_share'
+        source = ROOT / 'src' / 'sci_mvsim'
+        for resource in ('definitions', 'assets', 'tracks'):
+            shutil.copytree(source / resource, share / resource)
+        output = self.directory / 'from_installed_share'
+        with patch('sci_mvsim.world._resource_directory', side_effect=lambda name: share / name):
+            world_path = build_world(self.config, output)
+        world = ET.parse(world_path).getroot()
+        for include, color in zip(world.findall('include'), ('#3080ff', '#ff9020')):
+            definition_path = Path(include.get('file'))
+            definition = parse_definition(definition_path)
+            visuals = definition.findall('visual')
+            self.assertEqual(len(visuals), 7)
+            for visual in visuals:
+                uri = visual.find('model_uri').text.replace('${MVSIM_CURRENT_FILE_DIRECTORY}',
+                                                           str(definition_path.parent))
+                asset = Path(uri).resolve()
+                self.assertTrue(asset.is_file(), asset)
+                self.assertTrue(asset.is_relative_to(output))
+                if asset.suffix == '.glb':
+                    data = asset.read_bytes()
+                    self.assertEqual(struct.unpack_from('<III', data), (0x46546c67, 2, len(data)))
+                    json_length, kind = struct.unpack_from('<II', data, 12)
+                    self.assertEqual(kind, 0x4e4f534a)
+                    document = json.loads(data[20:20 + json_length])
+                    self.assertFalse(any('uri' in item for key in ('buffers', 'images')
+                                         for item in document.get(key, [])))
+            self.assertEqual(definition.find("visual[name='roboracer_accent']/model_color").text,
+                             color)
+
+    def test_track_dimensions_are_validated_asset_metadata(self):
+        config = deepcopy(self.config)
+        config['track']['semi_major'] = 7.1
+        output = self.directory / 'mismatched_asset'
+        with self.assertRaisesRegex(ValueError, 'regenerate the track explicitly'):
+            build_world(config, output)
+        self.assertFalse(output.exists())
+
+    def test_clockwise_travel_uses_the_inner_right_lane_and_reverses_the_other_lane(self):
+        config = deepcopy(self.config)
+        config['track']['direction'] = 'cw'
+        output = self.directory / 'clockwise'
+        world = ET.parse(build_world(config, output)).getroot()
+        ego = tuple(map(float, world.find('vehicle/init_pose').text.split()))
+        self.assertAlmostEqual(ego[0], 6.5, places=6)
+        self.assertAlmostEqual(ego[1], 0.0, places=6)
+        self.assertAlmostEqual(ego[2], -90.0, delta=0.001)
+        with (output / 'opposing_lane.csv').open(encoding='utf-8') as handle:
+            rows = handle.read().splitlines()
+        opposing = tuple(map(float, rows[1].split(',')))
+        self.assertAlmostEqual(opposing[1], 7.5, places=6)
+        self.assertAlmostEqual(opposing[2], 0.0, places=6)
+        self.assertAlmostEqual(opposing[3], math.pi / 2, places=6)
+        lane = EllipseTrack(7, 4, 2, 'cw').right_lane()
+        for block, distance in zip(world.findall('block'), config['traffic']['start_distances']):
+            first = tuple(map(float, block.find('animation/time_pose').text.split()))
+            expected = lane.pose_at(distance)
+            self.assertAlmostEqual(math.dist(first[1:3], expected[:2]), 0.0, delta=1e-6)
+            self.assertAlmostEqual(wrap_angle(math.radians(first[3]) - expected[2]),
+                                   0.0, delta=1e-5)
 
     def test_sensor_origins_and_limits_are_forwarded_to_nine_distinct_sensors(self):
         include = self.world.find('include')
