@@ -1,9 +1,9 @@
-COMPOSE ?= docker compose
-DOCS_PYTHON ?= .venv-docs/bin/python
-DOCS_OUTPUT ?= site
+COMPOSE ?= docker compose -f docker/compose.yaml
+DOCS_PYTHON ?= docs/.venv/bin/python
+DOCS_OUTPUT ?= docs/site
 
 .DEFAULT_GOAL := help
-.PHONY: help build run docs docs-build
+.PHONY: help build run attach docs docs-build
 
 help:
 	@printf '%s\n' \
@@ -26,7 +26,7 @@ run:
 	  $(COMPOSE) up --no-build --pull never --abort-on-container-exit --exit-code-from simulator
 
 docs:
-	$(DOCS_PYTHON) -m mkdocs serve --dev-addr 127.0.0.1:8000
+	$(DOCS_PYTHON) -m mkdocs serve --config-file docs/mkdocs.yml --dev-addr 127.0.0.1:8000
 
 docs-build:
-	$(DOCS_PYTHON) -m mkdocs build --strict --site-dir $(DOCS_OUTPUT)
+	$(DOCS_PYTHON) -m mkdocs build --strict --config-file docs/mkdocs.yml --site-dir "$(abspath $(DOCS_OUTPUT))"

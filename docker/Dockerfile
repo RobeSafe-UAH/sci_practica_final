@@ -40,9 +40,9 @@ RUN source /opt/ros/jazzy/setup.bash \
 # build/log directories remain outside it.
 FROM dependencies AS runtime
 COPY --from=builder /opt/sci_ws/install/ /opt/sci_ws/install/
-COPY LICENSE NOTICE /opt/sci/
-COPY config/ /opt/sci/config/
-COPY docker/ /opt/sci/docker/
+COPY LICENSE /opt/sci/
+COPY docker/config/ /opt/sci/config/
+COPY docker/start.sh docker/healthcheck.py docker/fastdds.xml /opt/sci/docker/
 RUN sed -i 's/\r$//' /opt/sci/docker/start.sh \
     && chmod 0755 /opt/sci/docker/start.sh \
     && printf '%s\n' \

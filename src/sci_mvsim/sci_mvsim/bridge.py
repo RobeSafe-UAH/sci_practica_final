@@ -169,7 +169,7 @@ def make_bridge_class():
             self.lidar_fov = math.radians(config['lidar']['fov_degrees'])
             robot = config['robot']
             self.watchdog = CommandWatchdog(
-                float(robot.get('max_speed', 1.0)), float(robot['wheelbase']),
+                float(robot.get('max_speed', 100.0 / 3.6)), float(robot['wheelbase']),
                 math.radians(float(robot.get('max_steer_deg', 24.0))), timeout=1.0)
 
             self.cmd_pub = self.create_publisher(Twist, f'{self.raw_prefix}/cmd_vel', 10)

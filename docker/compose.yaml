@@ -5,7 +5,8 @@ services:
     container_name: sci-practica-final
     image: sci-practica-final:jazzy
     build:
-      context: .
+      context: ..
+      dockerfile: docker/Dockerfile
     # DDS uses dynamic UDP ports. Docker Desktop requires host networking enabled.
     network_mode: host
     init: true

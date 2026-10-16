@@ -1,17 +1,13 @@
 # Práctica final de SCI · Simulador
 
-Simulador MVSim 3D con el modelo Traxxas de `rbsf-racing`, un Hokuyo y ocho
-sonares derivados del LiDAR. La pista tiene cuatro rectas y cuatro curvas,
-dos carriles, asfalto, césped y bordillos. La cámara sigue al coche.
-
-Las dos cajas esperan al primer mensaje en `/r0/cmd_vel` para empezar a
-circular. Las colisiones se notifican en `/r0/collision`.
+Simulador MVSim 3D con el modelo Traxxas de RoboRacer, un lidar Hokuyo y ocho
+sonares derivados del LiDAR.
 
 | Documentación | Contenido |
 |---|---|
-| [Instalación](docs/index.md) | Preparar el equipo y construir la imagen. |
-| [Ejecución](docs/ejecucion.md) | Lanzar, abrir el navegador y gestionar el contenedor. |
-| [Topics ROS](docs/topics.md) | Control, sensores y colisiones. |
-| [Repositorio](docs/repositorio.md) | Arquitectura, archivos y configuración del entorno. |
+| [Instalación](https://robesafe-uah.github.io/sci_practica_final/) | Preparar el equipo y construir la imagen. |
+| [Ejecución](https://robesafe-uah.github.io/sci_practica_final/ejecucion/) | Lanzar, abrir el navegador y gestionar el contenedor. |
+| [Topics ROS](https://robesafe-uah.github.io/sci_practica_final/topics/) | Control, sensores y colisiones. |
+| [Repositorio](https://robesafe-uah.github.io/sci_practica_final/repositorio/) | Arquitectura, archivos y configuración del entorno. |
 
-[Licencia Apache 2.0](LICENSE) · [Procedencia de los recursos](NOTICE)
+[Licencia Apache 2.0](LICENSE)

@@ -16,10 +16,14 @@ reloj de la simulación, utilizar `use_sim_time=true`.
 | `angular.z` | Velocidad angular; positiva hacia la izquierda. | rad/s |
 
 Los demás componentes no se utilizan. `angular.z` es la velocidad angular
-del coche, no el ángulo de las ruedas. Los límites son **1 m/s** de velocidad
+del coche, no el ángulo de las ruedas. Los límites son **100 km/h (27,78 m/s)** de velocidad
 y **24°** de dirección. El coche no gira sobre el sitio.
 
-El primer mensaje válido, aunque sea cero, pone en marcha las dos cajas.
+El límite de velocidad se configura con `robot.max_speed`, en m/s, en
+`docker/config/scenario.yaml`. Las consignas que lo superan se recortan. La velocidad
+efectiva depende de la aceleración y la dinámica del vehículo.
+
+El primer mensaje válido, aunque sea cero, pone en marcha las cajas configuradas.
 Después, las cajas siguen circulando aunque el coche esté parado.
 Enviar las órdenes a **10–20 Hz**: tras **un segundo sin mensajes nuevos**,
 la consigna del coche vuelve a cero.

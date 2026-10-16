@@ -1,16 +1,18 @@
 <!-- SPDX-License-Identifier: Apache-2.0
      SCI moving box footprint, animated by native MVSim keyframes in world.xml.
      A static body follows the animation and remains solid to ego and sensors.
-     The origin matches the F1TENTH rear axle. The polygon follows the original
-     rbsf_mvsim/definitions/f1tenth.vehicle.xml; no external visual models. -->
+     The origin is the centre of the box; dimensions are supplied by world.py.
+     No external visual models. -->
 <block:class name="sci_traffic">
   <static>true</static>
   <intangible>false</intangible>
   <mass>3.5</mass>
-  <zmin>0.03</zmin><zmax>0.24</zmax>
+  <zmin>0.0</zmin><zmax>${box_height|0.45}</zmax>
   <color>#ff9020</color>
   <shape>
-    <pt>0.45 0.15</pt><pt>0.45 -0.15</pt>
-    <pt>-0.13 -0.15</pt><pt>-0.13 0.15</pt>
+    <pt>${box_x_max|0.45} ${box_y_max|0.275}</pt>
+    <pt>${box_x_max|0.45} ${box_y_min|-0.275}</pt>
+    <pt>${box_x_min|-0.45} ${box_y_min|-0.275}</pt>
+    <pt>${box_x_min|-0.45} ${box_y_max|0.275}</pt>
   </shape>
 </block:class>

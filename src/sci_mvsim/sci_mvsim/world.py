@@ -4,7 +4,7 @@ SPDX-License-Identifier: Apache-2.0
 The occupancy-grid world/include structure follows RobeSafe-UAH/rbsf-racing,
 src/base_system/rbsf_mvsim/rbsf_mvsim/world.py, commit
 79a61ea7c14172b5bd736b0447b58c75da19c7af (Apache-2.0).
-Changes: no ROS dependency in the generator, installed track maps, opposing
+Changes: no ROS dependency in the generator, configurable track maps, opposing
 lanes, floor-only road markings, derived sonar cones, and native animated
 traffic blocks. Walls contain only thin occupied bands, as in RBSF's outline_map.
 """
@@ -52,6 +52,11 @@ def _integer(section, key, minimum):
     return value
 
 
+def _traffic_distances(traffic):
+    return [traffic['start_distance'] + index * traffic['spacing']
+            for index in range(traffic['count'])]
+
+
 def validate_config(config):
     """Return a normalized copy or raise ValueError before any output is written."""
     if not isinstance(config, dict):
@@ -63,7 +68,7 @@ def validate_config(config):
     track, robot, traffic = (config[key] for key in ('track', 'robot', 'traffic'))
     track.setdefault('name', 'circuito_sci')
     if not isinstance(track['name'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', track['name']):
-        raise ValueError('track.name must identify an installed track, without slashes')
+        raise ValueError('track.name must be a simple track identifier, without slashes')
     for key in ('wall_thickness', 'resolution'):
         _number(track, key, positive=True)
     if track.get('direction') not in ('cw', 'ccw'):
@@ -87,7 +92,7 @@ def validate_config(config):
     if not math.isclose(robot['wheelbase'], 0.3302, rel_tol=0, abs_tol=1e-9):
         raise ValueError('wheelbase must match the original f1tenth.vehicle.xml: 0.3302 m')
     _number(robot, 'spawn_s', nonnegative=True)
-    _number(robot, 'max_speed', positive=True, default=1.0)
+    _number(robot, 'max_speed', positive=True, default=100.0 / 3.6)
     steering = _number(robot, 'max_steer_deg', positive=True, default=24.0)
     if steering > 24.0:
         raise ValueError('max_steer_deg must not exceed the original F1TENTH limit of 24 degrees')
@@ -98,25 +103,29 @@ def validate_config(config):
         raise ValueError('the configured lanes are too narrow for the F1TENTH footprint')
 
     count = _integer(traffic, 'count', 0)
+    if count > 6:
+        raise ValueError('traffic.count must be an integer from 0 to 6')
     _number(traffic, 'speed', positive=True)
-    if traffic['speed'] >= robot['max_speed']:
+    if count and traffic['speed'] >= robot['max_speed']:
         raise ValueError('traffic.speed must be below robot.max_speed')
-    distances = traffic.get('start_distances')
-    if not isinstance(distances, list) or len(distances) != count:
-        raise ValueError('start_distances must contain one distance per traffic car')
+    _number(traffic, 'start_distance', positive=True, default=5.0)
+    _number(traffic, 'spacing', positive=True, default=12.0)
+    for key, default in (('box_length', 0.90), ('box_width', 0.55), ('box_height', 0.45)):
+        _number(traffic, key, positive=True, default=default)
+    box_radius = math.hypot(traffic['box_length'], traffic['box_width']) / 2.0
+    if count and track['width'] / 4.0 <= box_radius + track['resolution'] / 2.0:
+        raise ValueError('the configured lanes are too narrow for the traffic boxes')
     lane = road.right_lane()
     if robot['spawn_s'] >= lane.length:
         raise ValueError('spawn_s must be smaller than the right-lane lap length')
-    for i, value in enumerate(distances):
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError('start_distances must be numbers')
-        if not math.isfinite(value) or not 0.0 < value < lane.length:
-            raise ValueError('start_distances must be positive and less than a lap')
-        distances[i] = float(value)
+    distances = _traffic_distances(traffic)
+    if any(not 0.0 < distance < lane.length for distance in distances):
+        raise ValueError('traffic positions exceed one lap; reduce count, start_distance or spacing')
     offsets = sorted([0.0, *distances])
     gaps = [b - a for a, b in zip(offsets, offsets[1:] + [lane.length])]
-    if any(gap < 1.0 for gap in gaps):
-        raise ValueError('spawn distances must leave at least 1 m between vehicles')
+    minimum_gap = max(1.0, 2.0 * box_radius + 0.1)
+    if count and any(gap < minimum_gap for gap in gaps):
+        raise ValueError('traffic positions must leave space between the boxes and the vehicle')
 
     lidar, sonar = config['lidar'], config['sonar']
     _number(lidar, 'fov_degrees', positive=True)
@@ -150,11 +159,11 @@ def _resource_directory(name):
 
 
 def generate_track(config, out_dir):
-    """Explicitly create an RBSF-format track asset, never called during simulation.
+    """Create an RBSF-format track from the configured dimensions.
 
     The ROS map has a white closed driving corridor and occupied black infield
-    and outside. The CSV uses RBSF's x/y/right-width/left-width format. Runtime
-    applies an outline copy just as rbsf_mvsim does, rather than changing this map.
+    and outside. The CSV uses RBSF's x/y/right-width/left-width format. The world
+    uses an outline copy for physical walls, just as rbsf_mvsim does.
     """
     config = validate_config(config)
     track_config = config['track']
@@ -238,7 +247,7 @@ def outline_map(map_yaml, out_dir, thickness):
 
 
 def _track_paths(map_yaml, direction=None):
-    """Use the installed track's centreline and side widths for both legal lanes."""
+    """Use the generated centreline and side widths for both legal lanes."""
     spec = yaml.safe_load(Path(map_yaml).read_text(encoding='utf-8'))
     points, right_widths, left_widths = [], [], []
     with (Path(map_yaml).parent / spec['centerline']).open(encoding='utf-8') as handle:
@@ -284,23 +293,6 @@ def _track_paths(map_yaml, direction=None):
             'opposing_lane': with_tangents(opposing)}
 
 
-def _installed_track(config):
-    track = config['track']
-    directory = _resource_directory('tracks') / track['name']
-    path = directory / f'{track["name"]}.yaml'
-    if not path.is_file():
-        raise ValueError(f'installed track is missing: {path}')
-    spec = yaml.safe_load(path.read_text(encoding='utf-8'))
-    geometry = spec.get('sci_geometry', {})
-    if ((geometry and any(value != track.get(key) for key, value in geometry.items()
-                          if key != 'direction')) or
-            spec['resolution'] != track['resolution']):
-        raise ValueError('track dimensions are asset metadata; regenerate the track explicitly '
-                         'with python3 -m sci_mvsim.world --generate-track before running')
-    return path
-
-
-
 def _value(parent, tag, value):
     ET.SubElement(parent, tag).text = str(value)
 
@@ -344,7 +336,6 @@ def build_world(config, out_dir):
     are rendered by a separate ground texture and never alter this wall mask.
     """
     config = validate_config(config)
-    source_track = _installed_track(config)
     output = Path(out_dir).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
     definitions = output / 'definitions'
@@ -354,8 +345,7 @@ def build_world(config, out_dir):
     models = output / 'models' / 'f1tenth'
     shutil.copytree(_resource_directory('models') / 'f1tenth', models, dirs_exist_ok=True)
     track_directory = output / 'tracks' / config['track']['name']
-    shutil.copytree(source_track.parent, track_directory, dirs_exist_ok=True)
-    copied_track = track_directory / source_track.name
+    copied_track = generate_track(config, track_directory)
     map_yaml = outline_map(copied_track, output, config['track']['wall_thickness'])
     paths = _track_paths(copied_track, config['track']['direction'])
     right_lane = paths['right_lane']
@@ -380,7 +370,13 @@ def build_world(config, out_dir):
     ET.SubElement(world, 'include', file=str(definitions / 'f1tenth.vehicle.xml'),
                   meshes_dir=str(models), accent_mesh=str(models / 'roboracer_accent.stl'),
                   **_vehicle_include_attributes(config))
-    ET.SubElement(world, 'include', file=str(definitions / 'traffic.block.xml'))
+    traffic = config['traffic']
+    ET.SubElement(world, 'include', file=str(definitions / 'traffic.block.xml'),
+                  box_x_min=str(-traffic['box_length'] / 2.0),
+                  box_x_max=str(traffic['box_length'] / 2.0),
+                  box_y_min=str(-traffic['box_width'] / 2.0),
+                  box_y_max=str(traffic['box_width'] / 2.0),
+                  box_height=str(traffic['box_height']))
     ego = ET.SubElement(world, 'vehicle', name=config['robot']['name'], **{'class': 'sci_ego'})
     x, y, yaw = right_lane.pose_at(config['robot']['spawn_s'])
     _value(ego, 'init_pose', f'{x:.7f} {y:.7f} {math.degrees(yaw):.7f}')
@@ -389,7 +385,7 @@ def build_world(config, out_dir):
     gate = ET.SubElement(world, 'element', {'class': 'sci_start_gate'})
     _value(gate, 'vehicle_name', config['robot']['name'])
     _value(gate, 'start_file', signal)
-    for index, distance in enumerate(config['traffic']['start_distances']):
+    for index, distance in enumerate(_traffic_distances(traffic)):
         block = ET.SubElement(world, 'block', name=f'traffic_{index}', **{'class': 'sci_traffic'})
         # Keyframes are world poses relative to init_pose, hence identity here.
         _value(block, 'init_pose', '0 0 0')
@@ -404,7 +400,7 @@ def build_world(config, out_dir):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Explicitly regenerate the installed SCI track asset')
+    parser = argparse.ArgumentParser(description='Export the configured SCI track as PNG, YAML and CSV')
     parser.add_argument('--config', required=True, type=Path)
     parser.add_argument('--generate-track', required=True, type=Path, metavar='OUTPUT_DIRECTORY')
     arguments = parser.parse_args()
