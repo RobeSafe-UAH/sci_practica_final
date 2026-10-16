@@ -1,14 +1,15 @@
 # Metres, seconds, radians unless a key explicitly ends in _deg.
-# width is the TOTAL road width: two lanes, 1 m per lane, one per direction.
 track:
-  # Dimensions describe the installed asset. Regenerate its files to change the layout.
-  name: sci_ellipse
-  semi_major: 7.0
-  semi_minor: 4.0
-  width: 2.0
+  # Four straights joined by circular curves, two lanes in opposite directions.
+  name: circuito_sci
+  shape: rounded_rectangle
+  length: 40.0
+  height: 24.0
+  corner_radius: 5.0
+  width: 4.0
   direction: ccw
   wall_thickness: 0.12
-  resolution: 0.01
+  resolution: 0.02
 robot:
   name: r0
   wheelbase: 0.3302
@@ -25,22 +26,9 @@ lidar:
   z: 0.15
   fov_degrees: 270.0
   nrays: 1081
-  period: 0.05
-  max_range: 12.0
+  period: 0.025
+  max_range: 30.0
 sonar:
-  z: 0.10
-  fov_degrees: 15.0
-  nrays: 11
-  period: 0.05
-  min_range: 0.04
-  max_range: 5.0
-  noise_std: 0.005
-  poses:
-    - {index: 0, x: 0.46, y: 0.0, yaw_deg: 0.0}
-    - {index: 1, x: 0.40, y: 0.16, yaw_deg: 45.0}
-    - {index: 2, x: 0.16, y: 0.17, yaw_deg: 90.0}
-    - {index: 3, x: -0.14, y: 0.14, yaw_deg: 135.0}
-    - {index: 4, x: -0.15, y: 0.0, yaw_deg: 180.0}
-    - {index: 5, x: -0.14, y: -0.14, yaw_deg: -135.0}
-    - {index: 6, x: 0.16, y: -0.17, yaw_deg: -90.0}
-    - {index: 7, x: 0.40, y: -0.16, yaw_deg: -45.0}
+  # Equal-width sectors covering the Hokuyo scan, from right to left.
+  # All virtual cones inherit its origin, measurement limits and timestamps.
+  count: 8

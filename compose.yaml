@@ -2,6 +2,7 @@ name: sci-practica-final
 
 services:
   simulator:
+    container_name: sci-practica-final
     image: sci-practica-final:jazzy
     build:
       context: .

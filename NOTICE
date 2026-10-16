@@ -1,30 +1,34 @@
 SCI: entorno de la práctica final
 
-Este proyecto deriva de la integración de MVSim de RobeSafe-UAH/rbsf-racing,
+Este proyecto adapta la integración MVSim de RobeSafe-UAH/rbsf-racing,
 distribuida bajo Apache License 2.0:
 https://github.com/RobeSafe-UAH/rbsf-racing
-Referencia: 79a61ea7c14172b5bd736b0447b58c75da19c7af.
 
-Se adapta la geometría del coche F1TENTH, el sensor Hokuyo, la generación del
-mundo y el patrón de adaptación de mensajes ROS 2. Los archivos derivados
-identifican su procedencia y sus modificaciones. El escenario elíptico,
-el tráfico animado, los sonares y la interfaz de la práctica son específicos
-de este entorno.
+Las definiciones f1tenth.vehicle.xml y hokuyo-ust-10lx.sensor.xml se copian
+de src/base_system/rbsf_mvsim/definitions sin modificar su dinámica,
+controlador ni descripción visual. La instalación incluye sus recursos.
 
-La copia de rbsf-racing se usa como origen del código; no es necesaria para
-construir ni ejecutar este entorno.
+Las mallas de src/sci_mvsim/models/f1tenth proceden de
+src/base_system/f1tenth_gym_ros/meshes en rbsf-racing. Se distribuyen con
+la licencia del paquete f1tenth_gym_ros, MIT, Copyright (c) 2020 Hongrui Zheng,
+conservada íntegramente en src/sci_mvsim/models/f1tenth/LICENSE.
 
-Aspecto del coche RoboRacer/F1TENTH
+La estructura del mapa y de la línea central sigue rbsf_worlds/tracks.
+La licencia MIT de la plantilla se conserva en
+src/sci_mvsim/tracks/circuito_sci/LICENSE. SCI genera su propio trazado,
+imagen, origen y línea central: cuatro rectas, cuatro curvas y dos carriles.
+El circuito no reproduce el trazado real de Spielberg ni Levine.
 
-Los seis modelos GLB y roboracer_accent.stl de
-src/sci_mvsim/assets/rbsf_racing se copian sin cambios de
-src/base_system/f1tenth_gym_ros/meshes en el mismo repositorio y commit.
-Las poses y correcciones de orientación proceden de
-src/base_system/f1tenth_gym_ros/urdf/racecar_mesh.xacro. Ese paquete declara
-MIT, Copyright (c) 2020 Hongrui Zheng. Se conserva su licencia completa en
-src/sci_mvsim/assets/rbsf_racing/LICENSE y la procedencia en PROVENANCE.md.
+La superficie de asfalto y césped, la señalización y la malla de bordillos
+se generan mediante código propio de SCI. Su representación visual no
+sustituye el mapa físico utilizado por MVSim.
 
-Los modelos se cargan directamente en MVSim. Las adaptaciones XML conservan
-la escala F1TENTH y el origen en el eje trasero; asignan azul al coche del
-alumno y naranja al tráfico. La geometría de colisión y la dinámica de MVSim
-se configuran por separado de estos modelos visuales.
+El paquete sci_start_gate utiliza la API pública de WorldElement de MVSim
+para mantener el escenario parado hasta la primera orden ROS válida.
+Después habilita la dinámica original del coche y sincroniza el reloj de
+las animaciones del tráfico. No implementa evitación de obstáculos.
+
+El puente ROS, las medias por sectores, la notificación de colisiones y
+las adaptaciones del escenario se distribuyen bajo Apache License 2.0.
+La licencia completa se conserva en LICENSE. Los recursos se incluyen en
+este repositorio; rbsf-racing no es una dependencia de instalación.

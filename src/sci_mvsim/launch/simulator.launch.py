@@ -3,9 +3,11 @@
 Per-vehicle remapping follows rbsf-racing's rbsf_mvsim launch adapter pattern.
 """
 
+import os
 from pathlib import Path
 import tempfile
 
+from ament_index_python.packages import get_package_prefix
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction, Shutdown
 from launch.substitutions import LaunchConfiguration
@@ -15,8 +17,7 @@ from sci_mvsim.world import build_world, load_config
 
 
 def simulation_remappings(robot):
-    topics = ('cmd_vel', 'odom', 'base_pose_ground_truth', 'scan', 'tf', 'tf_static',
-              'collision', *(f'sonar{index}_scan' for index in range(8)))
+    topics = ('cmd_vel', 'odom', 'base_pose_ground_truth', 'scan', 'tf', 'tf_static', 'collision')
     return [(f'/{robot}/{topic}', f'/_sim/{robot}/{topic}') for topic in topics]
 
 
@@ -28,6 +29,9 @@ def launch_setup(context):
     if headless not in ('true', 'false'):
         raise ValueError('headless must be true or false')
     world_file = build_world(config, Path(tempfile.mkdtemp(prefix='sci_mvsim_')))
+    start_gate = Path(get_package_prefix('sci_start_gate')) / 'lib' / 'libsci_start_gate.so'
+    if not start_gate.is_file():
+        raise RuntimeError(f'The native start gate is not installed: {start_gate}')
     # MVSim already prefixes every topic with its vehicle name. A node namespace
     # here would duplicate that prefix; the bridge itself runs under /<robot>.
     simulator = Node(
@@ -41,11 +45,14 @@ def launch_setup(context):
             'use_sim_time': False,
         }],
         remappings=simulation_remappings(robot), output='screen',
+        additional_env={'LD_PRELOAD': os.pathsep.join(filter(None, (
+            str(start_gate), os.environ.get('LD_PRELOAD'))))},
         on_exit=[Shutdown(reason='MVSim stopped')],
     )
     bridge = Node(
         package='sci_mvsim', executable='simulation_bridge', namespace=robot,
-        parameters=[{'config_file': str(config_file), 'use_sim_time': True}],
+        parameters=[{'config_file': str(config_file), 'use_sim_time': True,
+                     'start_signal_file': str(world_file.parent / 'scenario.start')}],
         output='screen', on_exit=[Shutdown(reason='The simulation bridge stopped')],
     )
     return [LogInfo(msg=f'SCI world: {world_file}'), simulator, bridge]

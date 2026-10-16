@@ -1,11 +1,11 @@
-"""Closed paths and constant-width elliptical roads, independent of ROS.
+"""Closed paths and constant-width roads, independent of ROS.
 
 SPDX-License-Identifier: Apache-2.0
 Arc-length interpolation is adapted from RobeSafe-UAH/rbsf-racing,
 src/base_system/rbsf_worlds/rbsf_worlds/paths.py, commit
 79a61ea7c14172b5bd736b0447b58c75da19c7af (Apache-2.0).
 Changes: standard-library implementation, cached distances, input validation,
-and analytic normal offsets for an elliptical road with two opposing lanes.
+and rounded rectangular roads with two opposing lanes.
 """
 
 from bisect import bisect_right
@@ -67,103 +67,86 @@ class ClosedPath:
         return x0 + fraction * (x1 - x0), y0 + fraction * (y1 - y0), yaw
 
 
-def pose_at(points, distance):
-    """Interpolate an uncached closed path; use ClosedPath for repeated queries."""
-    return ClosedPath(points).pose_at(distance)
-
-
 @dataclass(frozen=True)
-class EllipseTrack:
-    """A road of TOTAL width ``width`` around an ellipse with semiaxes a and b.
+class RoundedRectangleTrack:
+    """Four straights joined tangentially by four circular quarter turns.
 
-    The positive normal points outside. A vehicle travelling counterclockwise
-    has its right lane outside; clockwise traffic has its right lane inside.
+    length and height describe the centreline's bounding rectangle; width is
+    the total road width. Positive offsets point outside the rectangle.
     """
 
-    semi_major: float
-    semi_minor: float
+    length: float
+    height: float
+    corner_radius: float
     width: float
     direction: str = 'ccw'
 
     def __post_init__(self):
-        values = (self.semi_major, self.semi_minor, self.width)
-        if not all(math.isfinite(value) and value > 0.0 for value in values):
-            raise ValueError('ellipse semiaxes and road width must be finite and positive')
-        if self.semi_major < self.semi_minor:
-            raise ValueError('semi_major must be at least semi_minor')
-        if self.direction not in ('ccw', 'cw'):
-            raise ValueError('direction must be ccw or cw')
-        if self.width / 2.0 >= self.min_radius:
-            raise ValueError('the inner road offset folds: width/2 must be less than b*b/a')
-
-    @property
-    def sign(self):
-        """Orientation relative to increasing ellipse parameter."""
-        return 1 if self.direction == 'ccw' else -1
+        if not all(math.isfinite(v) and v > 0 for v in
+                   (self.length, self.height, self.corner_radius, self.width)):
+            raise ValueError('track dimensions must be finite and positive')
+        if 2 * self.corner_radius >= min(self.length, self.height):
+            raise ValueError('corner_radius must leave four nonempty straights')
+        if self.width / 2 >= self.corner_radius:
+            raise ValueError('road width must leave a positive inner curve radius')
+        if self.direction not in ('cw', 'ccw'):
+            raise ValueError('direction must be cw or ccw')
 
     @property
     def min_radius(self):
-        """Minimum radius of curvature on the centre ellipse."""
-        return self.semi_minor ** 2 / self.semi_major
+        return self.corner_radius
 
     @property
     def right_offset(self):
-        """Signed outward offset of the ego's lane centre."""
-        return self.sign * self.width / 4.0
-
-    def normal_at(self, theta):
-        """Outward unit normal to the ellipse."""
-        a, b = self.semi_major, self.semi_minor
-        q = math.hypot(a * math.sin(theta), b * math.cos(theta))
-        return b * math.cos(theta) / q, a * math.sin(theta) / q
-
-    def point_at(self, theta, offset=0.0):
-        """Point at a true normal offset, in metres, from the centre ellipse."""
-        nx, ny = self.normal_at(theta)
-        return (self.semi_major * math.cos(theta) + offset * nx,
-                self.semi_minor * math.sin(theta) + offset * ny)
-
-    def heading_at(self, theta, direction=None):
-        """Tangent heading in the specified driving direction (radians)."""
-        sign = self.sign if direction is None else direction
-        if sign not in (-1, 1):
-            raise ValueError('direction must be +1 or -1')
-        return math.atan2(sign * self.semi_minor * math.cos(theta),
-                          -sign * self.semi_major * math.sin(theta))
-
-    def curvature_at(self, theta, offset=0.0):
-        """Unsigned curvature of a regular outward-offset curve."""
-        a, b = self.semi_major, self.semi_minor
-        q = math.hypot(a * math.sin(theta), b * math.cos(theta))
-        curvature = a * b / q ** 3
-        if 1.0 + offset * curvature <= 0.0:
-            raise ValueError('the offset curve is not regular')
-        return curvature / (1.0 + offset * curvature)
+        return (1 if self.direction == 'ccw' else -1) * self.width / 4
 
     def path(self, offset=0.0, samples=4096, direction=None):
-        """Sample a closed offset curve in driving order, without repeating the endpoint."""
-        if not isinstance(samples, int) or isinstance(samples, bool) or samples < 32:
+        if not math.isfinite(offset) or self.corner_radius + offset <= 0:
+            raise ValueError('the offset curve must have a positive radius')
+        if type(samples) is not int or samples < 32:
             raise ValueError('at least 32 path samples are required')
-        sign = self.sign if direction is None else direction
+        sign = (1 if self.direction == 'ccw' else -1) if direction is None else direction
         if sign not in (-1, 1):
             raise ValueError('direction must be +1 or -1')
-        if offset <= -self.min_radius:
-            raise ValueError('the offset curve is not regular')
-        parameters = [sign * math.tau * i / samples for i in range(samples)]
-        return ClosedPath((self.point_at(theta, offset) for theta in parameters),
-                          (self.heading_at(theta, sign) for theta in parameters))
+        hx, hy, radius = self.length / 2, self.height / 2, self.corner_radius
+        cx, cy, r = hx - radius, hy - radius, radius + offset
+        perimeter = 4 * (cx + cy) + math.tau * r
+        points, headings = [], []
+
+        def straight(x0, y0, x1, y1):
+            count = max(1, math.ceil(samples * math.hypot(x1 - x0, y1 - y0) / perimeter))
+            yaw = math.atan2(y1 - y0, x1 - x0)
+            for i in range(count):
+                f = i / count
+                points.append((x0 + f * (x1 - x0), y0 + f * (y1 - y0)))
+                headings.append(yaw)
+
+        def turn(x, y, start):
+            count = max(2, math.ceil(samples * math.pi * r / 2 / perimeter))
+            for i in range(count):
+                angle = start + math.pi * i / (2 * count)
+                points.append((x + r * math.cos(angle), y + r * math.sin(angle)))
+                headings.append(wrap_angle(angle + math.pi / 2))
+
+        # Start midway along the bottom straight, clear of the curve joins.
+        straight(0.0, -hy - offset, cx, -hy - offset)
+        turn(cx, -cy, -math.pi / 2)
+        straight(hx + offset, -cy, hx + offset, cy)
+        turn(cx, cy, 0.0)
+        straight(cx, hy + offset, -cx, hy + offset)
+        turn(-cx, cy, math.pi / 2)
+        straight(-hx - offset, cy, -hx - offset, -cy)
+        turn(-cx, -cy, math.pi)
+        straight(-cx, -hy - offset, 0.0, -hy - offset)
+        if sign < 0:
+            points = points[:1] + points[:0:-1]
+            headings = [wrap_angle(yaw + math.pi)
+                        for yaw in headings[:1] + headings[:0:-1]]
+        return ClosedPath(points, headings)
 
     def right_lane(self, samples=4096):
-        """Reference path for the ego and its two slow leaders."""
         return self.path(self.right_offset, samples)
 
     def opposing_lane(self, samples=4096):
-        """The other lane, traversed in its legal opposite direction."""
-        return self.path(-self.right_offset, samples, direction=-self.sign)
-
-
-def transform_point(pose, point):
-    """Transform a body-frame point with an (x, y, yaw_rad) world pose."""
-    x, y, yaw = pose
-    c, s = math.cos(yaw), math.sin(yaw)
-    return x + c * point[0] - s * point[1], y + s * point[0] + c * point[1]
+        sign = -1 if self.direction == 'ccw' else 1
+        return self.path(-self.right_offset, samples, direction=sign)

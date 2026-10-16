@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-jazzy-mvsim \
         ros-jazzy-rclpy \
         ros-jazzy-sensor-msgs \
+        ros-jazzy-std-msgs \
         ros-jazzy-geometry-msgs \
         ros-jazzy-nav-msgs \
         ros-jazzy-tf2-ros \
@@ -26,27 +27,17 @@ RUN groupadd --gid 10001 sci \
 FROM dependencies AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        python3-colcon-common-extensions \
+        python3-colcon-common-extensions build-essential cmake librapidxml-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/sci_ws
 COPY src/ ./src/
 RUN source /opt/ros/jazzy/setup.bash \
-    && colcon build --merge-install --packages-select sci_mvsim \
+    && colcon build --merge-install --packages-select sci_start_gate sci_mvsim \
         --event-handlers console_direct+
 
-# Optional verification: docker build --target test .
-FROM builder AS test
-RUN apt-get update && apt-get install -y --no-install-recommends python3-pytest \
-    && rm -rf /var/lib/apt/lists/*
-COPY tests/ ./tests/
-COPY config/ ./config/
-RUN source /opt/ros/jazzy/setup.bash \
-    && source /opt/sci_ws/install/setup.bash \
-    && python3 -m pytest -q tests
-
 # Only the installed application crosses into the final image. Build sources,
-# build/log directories and the optional test stage remain outside it.
+# build/log directories remain outside it.
 FROM dependencies AS runtime
 COPY --from=builder /opt/sci_ws/install/ /opt/sci_ws/install/
 COPY LICENSE NOTICE /opt/sci/

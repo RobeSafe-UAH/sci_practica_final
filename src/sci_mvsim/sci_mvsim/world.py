@@ -4,8 +4,8 @@ SPDX-License-Identifier: Apache-2.0
 The occupancy-grid world/include structure follows RobeSafe-UAH/rbsf-racing,
 src/base_system/rbsf_mvsim/rbsf_mvsim/world.py, commit
 79a61ea7c14172b5bd736b0447b58c75da19c7af (Apache-2.0).
-Changes: no ROS dependency in the generator, constant-width ellipse, opposing
-lanes, floor-only road markings, independent sonar origins, and native animated
+Changes: no ROS dependency in the generator, installed track maps, opposing
+lanes, floor-only road markings, derived sonar cones, and native animated
 traffic blocks. Walls contain only thin occupied bands, as in RBSF's outline_map.
 """
 
@@ -21,7 +21,13 @@ import xml.etree.ElementTree as ET
 from PIL import Image, ImageChops, ImageDraw
 import yaml
 
-from .geometry import ClosedPath, EllipseTrack, wrap_angle
+from .geometry import ClosedPath, RoundedRectangleTrack, wrap_angle
+from .scene import add_scene
+
+
+def _road_geometry(track):
+    return RoundedRectangleTrack(*(track[key] for key in
+        ('length', 'height', 'corner_radius', 'width', 'direction')))
 
 
 def _number(section, key, *, positive=False, nonnegative=False, default=None):
@@ -55,13 +61,18 @@ def validate_config(config):
         if not isinstance(config.get(name), dict):
             raise ValueError(f'{name} must be a mapping')
     track, robot, traffic = (config[key] for key in ('track', 'robot', 'traffic'))
-    track.setdefault('name', 'sci_ellipse')
+    track.setdefault('name', 'circuito_sci')
     if not isinstance(track['name'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', track['name']):
         raise ValueError('track.name must identify an installed track, without slashes')
-    for key in ('semi_major', 'semi_minor', 'width', 'wall_thickness', 'resolution'):
+    for key in ('wall_thickness', 'resolution'):
         _number(track, key, positive=True)
-    road = EllipseTrack(track['semi_major'], track['semi_minor'],
-                        track['width'], track.get('direction'))
+    if track.get('direction') not in ('cw', 'ccw'):
+        raise ValueError('track.direction must be cw or ccw')
+    if track.get('shape') != 'rounded_rectangle':
+        raise ValueError('track.shape must be rounded_rectangle')
+    for key in ('length', 'height', 'corner_radius', 'width'):
+        _number(track, key, positive=True)
+    road = _road_geometry(track)
     if track['width'] / 2.0 + track['wall_thickness'] >= road.min_radius:
         raise ValueError('inner wall offset folds; reduce width or wall_thickness')
     if track['wall_thickness'] < 2.0 * track['resolution']:
@@ -73,13 +84,14 @@ def validate_config(config):
                                                                robot['name']):
         raise ValueError('robot.name must be a simple ROS name, without slashes')
     _number(robot, 'wheelbase', positive=True)
+    if not math.isclose(robot['wheelbase'], 0.3302, rel_tol=0, abs_tol=1e-9):
+        raise ValueError('wheelbase must match the original f1tenth.vehicle.xml: 0.3302 m')
     _number(robot, 'spawn_s', nonnegative=True)
     _number(robot, 'max_speed', positive=True, default=1.0)
     steering = _number(robot, 'max_steer_deg', positive=True, default=24.0)
-    if steering >= 90.0:
-        raise ValueError('max_steer_deg must be less than 90 degrees')
-    lane_radius = road.min_radius + road.right_offset
-    if robot['wheelbase'] / math.tan(math.radians(steering)) >= lane_radius:
+    if steering > 24.0:
+        raise ValueError('max_steer_deg must not exceed the original F1TENTH limit of 24 degrees')
+    if robot['wheelbase'] / math.tan(math.radians(steering)) >= road.min_radius + road.right_offset:
         raise ValueError('the right lane requires more steering than the robot permits')
     # The greatest distance from the rear-axle origin to the fixed chassis polygon.
     if track['width'] / 4.0 <= math.hypot(0.45, 0.15) + track['resolution'] / 2.0:
@@ -106,33 +118,19 @@ def validate_config(config):
     if any(gap < 1.0 for gap in gaps):
         raise ValueError('spawn distances must leave at least 1 m between vehicles')
 
-    for name in ('lidar', 'sonar'):
-        sensor = config[name]
-        _number(sensor, 'fov_degrees', positive=True)
-        if sensor['fov_degrees'] > 360.0:
-            raise ValueError(f'{name}.fov_degrees must be <= 360')
-        _integer(sensor, 'nrays', 2)
-        _number(sensor, 'period', positive=True)
-        _number(sensor, 'max_range', positive=True)
     lidar, sonar = config['lidar'], config['sonar']
+    _number(lidar, 'fov_degrees', positive=True)
+    if lidar['fov_degrees'] > 270.0:
+        raise ValueError('the Hokuyo field of view must be <= 270 degrees')
+    _integer(lidar, 'nrays', 8)
+    _number(lidar, 'period', positive=True)
+    _number(lidar, 'max_range', positive=True)
     for key in ('x', 'y', 'z'):
         _number(lidar, key)
-    _number(sonar, 'z', nonnegative=True, default=0.10)
-    _number(sonar, 'noise_std', nonnegative=True)
-    _number(sonar, 'min_range', positive=True)
-    if sonar['min_range'] >= sonar['max_range']:
-        raise ValueError('sonar.min_range must be smaller than max_range')
-    poses = sonar.get('poses')
-    if not isinstance(poses, list) or len(poses) != 8 or not all(isinstance(p, dict) for p in poses):
-        raise ValueError('sonar.poses must contain exactly eight mappings')
-    indices = []
-    for pose in poses:
-        indices.append(_integer(pose, 'index', 0))
-        for key in ('x', 'y', 'yaw_deg'):
-            _number(pose, key)
-    if sorted(indices) != list(range(8)):
-        raise ValueError('sonar indices must be unique and exactly 0..7')
-    sonar['poses'].sort(key=lambda pose: pose['index'])
+    if _integer(sonar, 'count', 8) != 8:
+        raise ValueError('the simulator must publish exactly eight derived sonar cones')
+    if set(sonar) != {'count'}:
+        raise ValueError('sonars derive their poses and range limits from the Hokuyo; only count is configured')
     return config
 
 
@@ -146,7 +144,7 @@ def _resource_directory(name):
     source = Path(__file__).resolve().parents[1] / name
     if source.is_dir():
         return source
-    # Keep offline generation/test imports independent of a running ROS installation.
+    # Keep map generation independent of a running ROS installation.
     from ament_index_python.packages import get_package_share_directory
     return Path(get_package_share_directory('sci_mvsim')) / name
 
@@ -162,12 +160,12 @@ def generate_track(config, out_dir):
     track_config = config['track']
     output = Path(out_dir).expanduser().resolve()
     output.mkdir(parents=True, exist_ok=True)
-    road = EllipseTrack(track_config['semi_major'], track_config['semi_minor'],
-                        track_config['width'], track_config['direction'])
+    road = _road_geometry(track_config)
     resolution = track_config['resolution']
     half_width, thickness = road.width / 2.0, track_config['wall_thickness']
-    columns = math.ceil(2.0 * (road.semi_major + half_width + thickness + 1.0) / resolution)
-    rows = math.ceil(2.0 * (road.semi_minor + half_width + thickness + 1.0) / resolution)
+    extent_x, extent_y = road.length / 2, road.height / 2
+    columns = math.ceil(2.0 * (extent_x + half_width + thickness + 1.0) / resolution)
+    rows = math.ceil(2.0 * (extent_y + half_width + thickness + 1.0) / resolution)
     if columns * rows > 16_000_000:
         raise ValueError('occupancy grid would exceed 16 million cells')
     origin = (-columns * resolution / 2.0, -rows * resolution / 2.0)
@@ -177,8 +175,7 @@ def generate_track(config, out_dir):
                 rows * scale - 0.5 - (point[1] - origin[1]) / resolution * scale)
 
     def boundary(offset, scale=1):
-        return [pixel(road.point_at(math.tau * i / 2048, offset), scale)
-                for i in range(2048)]
+        return [pixel(point, scale) for point in road.path(offset, samples=2048).points]
 
     # Classify at cell centres with a small subpixel rasterization error.
     scale = 4
@@ -189,12 +186,18 @@ def generate_track(config, out_dir):
     occupancy = occupancy.resize((columns, rows), resample=Image.Resampling.NEAREST)
     name = track_config['name']
     occupancy.save(output / f'{name}.png')
-    geometry = {key: track_config[key] for key in ('semi_major', 'semi_minor', 'width', 'direction')}
+    geometry_keys = ('shape', 'length', 'height', 'corner_radius', 'width', 'direction')
+    geometry = {key: track_config[key] for key in geometry_keys}
+    # The ROS-map structure and classification thresholds follow RBSF's
+    # tracks/spielberg/spielberg.yaml. Resolution, origin, image and reference
+    # coordinates belong to this regenerated SCI track.
     map_spec = {'image': f'{name}.png', 'resolution': resolution,
                 'origin': [*origin, 0.0], 'negate': 0,
-                'occupied_thresh': 0.65, 'free_thresh': 0.196,
+                'occupied_thresh': 0.45, 'free_thresh': 0.196,
                 'centerline': f'{name}_centerline.csv', 'sci_geometry': geometry}
     with (output / f'{name}.yaml').open('w', encoding='utf-8') as handle:
+        handle.write('# Adapted from rbsf-racing rbsf_worlds/tracks/spielberg/spielberg.yaml.\n'
+                     '# SCI: regenerated two-lane track with four straights and four curves.\n')
         yaml.safe_dump(map_spec, handle, sort_keys=False)
     with (output / f'{name}_centerline.csv').open('w', newline='', encoding='utf-8') as handle:
         handle.write('# x_m, y_m, w_tr_right_m, w_tr_left_m\n')
@@ -248,7 +251,11 @@ def _track_paths(map_yaml, direction=None):
             points.append((x, y))
             right_widths.append(right)
             left_widths.append(left)
-    original_direction = spec['sci_geometry']['direction']
+    signed_area = sum(x * points[(i + 1) % len(points)][1] -
+                      points[(i + 1) % len(points)][0] * y
+                      for i, (x, y) in enumerate(points))
+    original_direction = spec.get('sci_geometry', {}).get(
+        'direction', 'ccw' if signed_area > 0 else 'cw')
     if direction is not None and direction != original_direction:
         # Keep the same starting cross-section while reversing traversal. The
         # old left side becomes the new right side, including asymmetric widths.
@@ -285,35 +292,13 @@ def _installed_track(config):
         raise ValueError(f'installed track is missing: {path}')
     spec = yaml.safe_load(path.read_text(encoding='utf-8'))
     geometry = spec.get('sci_geometry', {})
-    if (any(geometry.get(key) != track[key] for key in ('semi_major', 'semi_minor', 'width')) or
+    if ((geometry and any(value != track.get(key) for key, value in geometry.items()
+                          if key != 'direction')) or
             spec['resolution'] != track['resolution']):
         raise ValueError('track dimensions are asset metadata; regenerate the track explicitly '
                          'with python3 -m sci_mvsim.world --generate-track before running')
     return path
 
-
-def _track_visual(map_yaml, paths, output):
-    """Keep RBSF's white/black occupancy-map appearance and add a grey lane divider."""
-    spec = yaml.safe_load(Path(map_yaml).read_text(encoding='utf-8'))
-    with Image.open(Path(map_yaml).parent / spec['image']) as source:
-        floor = source.convert('RGB')
-    resolution, origin = spec['resolution'], spec['origin']
-
-    def pixel(point):
-        return ((point[0] - origin[0]) / resolution - 0.5,
-                floor.height - 0.5 - (point[1] - origin[1]) / resolution)
-
-    floor_drawing = ImageDraw.Draw(floor)
-    center = paths['centerline']
-    marking_width = max(1, round(0.06 / resolution))
-    s = 0.0
-    while s < center.length:
-        dash = [pixel(center.pose_at(min(s + distance, center.length))[:2])
-                for distance in (0.0, 0.1, 0.2, 0.3, 0.4)]
-        floor_drawing.line(dash, fill='#808080', width=marking_width)
-        s += 0.9
-    floor.save(output / 'road_texture.png')
-    return origin, (floor.width * resolution, floor.height * resolution)
 
 
 def _value(parent, tag, value):
@@ -321,15 +306,14 @@ def _value(parent, tag, value):
 
 
 def _vehicle_include_attributes(config):
-    attributes = {key: str(config['robot'][key]) for key in ('wheelbase', 'max_steer_deg')}
-    for name in ('lidar', 'sonar'):
-        for key, value in config[name].items():
-            if key != 'poses':
-                attributes[f'{name}_{key}'] = str(value)
-    for pose in config['sonar']['poses']:
-        for key in ('x', 'y', 'yaw_deg'):
-            attributes[f'sonar{pose["index"]}_{key}'] = str(pose[key])
-    return attributes
+    # The original vehicle and Hokuyo XMLs are copied verbatim from racing.
+    # Use the parameters already supported by their nested include.
+    lidar = config['lidar']
+    bindings = {'sensor_x': 'x', 'sensor_y': 'y', 'sensor_z': 'z',
+                'fov_degrees': 'fov_degrees', 'sensor_period_sec': 'period',
+                'sensor_nrays': 'nrays', 'max_range': 'max_range'}
+    return {'class_name': 'sci_ego', 'chassis_color': '#3080ff',
+            **{parameter: str(lidar[key]) for parameter, key in bindings.items()}}
 
 
 def _traffic_animation(block, lane, initial_s, speed):
@@ -355,6 +339,7 @@ def build_world(config, out_dir):
 
     All referenced files are generated/copied below ``out_dir``. Traffic runs
     entirely in MVSim: Python generates keyframes once and is not a traffic loop.
+    The native gate holds their clock at zero until the first ROS command.
     2D sensing and collisions use the thin occupied wall bands. Road markings
     are rendered by a separate ground texture and never alter this wall mask.
     """
@@ -366,58 +351,50 @@ def build_world(config, out_dir):
     definitions.mkdir(exist_ok=True)
     for source in _resource_directory('definitions').glob('*.xml'):
         shutil.copyfile(source, definitions / source.name)
-    shutil.copytree(_resource_directory('assets'), output / 'assets', dirs_exist_ok=True)
+    models = output / 'models' / 'f1tenth'
+    shutil.copytree(_resource_directory('models') / 'f1tenth', models, dirs_exist_ok=True)
     track_directory = output / 'tracks' / config['track']['name']
     shutil.copytree(source_track.parent, track_directory, dirs_exist_ok=True)
     copied_track = track_directory / source_track.name
     map_yaml = outline_map(copied_track, output, config['track']['wall_thickness'])
     paths = _track_paths(copied_track, config['track']['direction'])
-    origin, size = _track_visual(map_yaml, paths, output)
     right_lane = paths['right_lane']
-    track = config['track']
-    road = EllipseTrack(track['semi_major'], track['semi_minor'], track['width'], track['direction'])
     world = ET.Element('mvsim_world', version='1.0')
     world.append(ET.Comment(' SCI: one lane per direction; slow traffic follows ego lane. '))
     _value(world, 'simul_timestep', 0.005)
+    _value(world, 'collision_threshold', 0.0)
     gui = ET.SubElement(world, 'gui')
-    _value(gui, 'ortho', 'true')
-    # Leave the left side of the viewport to MVSim's control/status panels.
-    # A full lap and both lanes stay visible at the default desktop size.
-    _value(gui, 'cam_distance', max(28, 3.5 * (road.semi_major + road.width / 2)))
-    _value(gui, 'cam_point_to', f'{-0.375 * (road.semi_major + road.width / 2):.3f} 0 0')
-    _value(gui, 'cam_elevation', 90)
-    _value(gui, 'cam_azimuth', -90)
+    _value(gui, 'ortho', 'false')
+    _value(gui, 'follow_vehicle', config['robot']['name'])
+    _value(gui, 'cam_distance', 8)
+    _value(gui, 'cam_elevation', 50)
+    _value(gui, 'cam_azimuth', -135)
+    _value(gui, 'fov_deg', 60)
+    _value(gui, 'refresh_fps', 30)
     _value(gui, 'show_forces', 'false')
-    ground = ET.SubElement(world, 'element', {'class': 'horizontal_plane'})
-    for tag, value in (('x_min', origin[0]), ('y_min', origin[1]),
-                       ('x_max', origin[0] + size[0]), ('y_max', origin[1] + size[1]),
-                       # The grid renders at z=0. A uniform 2 mm lift makes the
-                       # road visible while leaving all horizontal geometry intact.
-                       ('z', 0.002), ('texture', output / 'road_texture.png'),
-                       ('texture_size_x', size[0]), ('texture_size_y', size[1])):
-        _value(ground, tag, value)
+    _value(gui, 'show_sensor_points', 'false')
+    add_scene(world, config, copied_track, paths, output)
     grid = ET.SubElement(world, 'element', {'class': 'occupancy_grid'})
     _value(grid, 'file', map_yaml)
-    ET.SubElement(world, 'include', file=str(definitions / 'ackermann.vehicle.xml'),
+    _value(grid, 'show_collisions', 'false')
+    ET.SubElement(world, 'include', file=str(definitions / 'f1tenth.vehicle.xml'),
+                  meshes_dir=str(models), accent_mesh=str(models / 'roboracer_accent.stl'),
                   **_vehicle_include_attributes(config))
     ET.SubElement(world, 'include', file=str(definitions / 'traffic.block.xml'))
     ego = ET.SubElement(world, 'vehicle', name=config['robot']['name'], **{'class': 'sci_ego'})
     x, y, yaw = right_lane.pose_at(config['robot']['spawn_s'])
     _value(ego, 'init_pose', f'{x:.7f} {y:.7f} {math.degrees(yaw):.7f}')
+    signal = output / 'scenario.start'
+    signal.write_text('0\n', encoding='ascii')
+    gate = ET.SubElement(world, 'element', {'class': 'sci_start_gate'})
+    _value(gate, 'vehicle_name', config['robot']['name'])
+    _value(gate, 'start_file', signal)
     for index, distance in enumerate(config['traffic']['start_distances']):
-        block = ET.SubElement(world, 'block', name=f'slow_car_{index}', **{'class': 'sci_traffic'})
+        block = ET.SubElement(world, 'block', name=f'traffic_{index}', **{'class': 'sci_traffic'})
         # Keyframes are world poses relative to init_pose, hence identity here.
         _value(block, 'init_pose', '0 0 0')
         _traffic_animation(block, right_lane, config['robot']['spawn_s'] + distance,
                            config['traffic']['speed'])
-    for name, path in paths.items():
-        with (output / f'{name}.csv').open('w', newline='', encoding='utf-8') as handle:
-            writer = csv.writer(handle, lineterminator='\n')
-            writer.writerow(['s_m', 'x_m', 'y_m', 'yaw_rad'])
-            samples = math.ceil(path.length / 0.05)
-            for i in range(samples):
-                s = path.length * i / samples
-                writer.writerow([f'{s:.7f}', *(f'{v:.7f}' for v in path.pose_at(s))])
     ET.indent(world)
     destination = output / 'world.xml'
     ET.ElementTree(world).write(destination, encoding='utf-8', xml_declaration=True)

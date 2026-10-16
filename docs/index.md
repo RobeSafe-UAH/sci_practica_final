@@ -150,13 +150,3 @@ definiciones del vehículo o el Dockerfile.
 
 La construcción **no arranca** la simulación. Continuar en
 [Ejecución](ejecucion.md).
-
-## Compatibilidad
-
-La imagen utiliza dependencias disponibles para Linux AMD64 y ARM64. El
-escritorio se muestra en el navegador mediante renderizado por software;
-no requiere GPU dedicada ni un servidor gráfico instalado en el equipo.
-
-La ejecución completa se ha comprobado en **Linux AMD64**. Windows con WSL2,
-macOS Intel, macOS Apple Silicon y Linux ARM64 tienen instrucciones de
-instalación, pero quedan pendientes de validación en esos equipos.
