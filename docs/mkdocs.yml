@@ -1,5 +1,5 @@
 site_name: Práctica final de SCI
-site_description: Instalación, ejecución, interfaz ROS 2 y arquitectura del simulador SCI.
+site_description: Guía de instalación y uso del simulador SCI.
 site_url: https://robesafe-uah.github.io/sci_practica_final/
 repo_url: https://github.com/RobeSafe-UAH/sci_practica_final
 repo_name: RobeSafe-UAH/sci_practica_final
@@ -18,18 +18,16 @@ theme:
     - content.tabs.link
     - content.code.copy
 nav:
-  - Instalación:
-      - Instalar y construir: index.md
-  - Ejecución:
-      - Simulación y navegador: ejecucion.md
-  - Topics ROS:
-      - Control y sensores: topics.md
-  - Repositorio:
-      - Arquitectura y configuración: repositorio.md
+  - Instalación: index.md
+  - Ejecución: ejecucion.md
+  - ROS2: topics.md
+  - Repositorio: repositorio.md
+extra_css:
+  - assets/styles.css
 markdown_extensions:
   - tables
-  - toc:
-      permalink: true
+  - md_in_html
+  - sane_lists
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true

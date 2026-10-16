@@ -57,6 +57,16 @@ def _traffic_distances(traffic):
             for index in range(traffic['count'])]
 
 
+def _fits_right_lane(road, corners, margin):
+    """Check lateral clearance on straights and the tightest circular curve."""
+    half_lane = road.width / 4.0 - margin
+    radius = road.min_radius + road.right_offset
+    sign = 1 if road.direction == 'ccw' else -1
+    return all(abs(y) < half_lane and
+               abs(math.hypot(x, radius - sign * y) - radius) < half_lane
+               for x, y in corners)
+
+
 def validate_config(config):
     """Return a normalized copy or raise ValueError before any output is written."""
     if not isinstance(config, dict):
@@ -93,13 +103,14 @@ def validate_config(config):
         raise ValueError('wheelbase must match the original f1tenth.vehicle.xml: 0.3302 m')
     _number(robot, 'spawn_s', nonnegative=True)
     _number(robot, 'max_speed', positive=True, default=100.0 / 3.6)
-    steering = _number(robot, 'max_steer_deg', positive=True, default=24.0)
-    if steering > 24.0:
-        raise ValueError('max_steer_deg must not exceed the original F1TENTH limit of 24 degrees')
+    steering = _number(robot, 'max_steer_deg', positive=True, default=45.0)
+    if steering > 45.0:
+        raise ValueError('max_steer_deg must not exceed 45 degrees')
     if robot['wheelbase'] / math.tan(math.radians(steering)) >= road.min_radius + road.right_offset:
         raise ValueError('the right lane requires more steering than the robot permits')
-    # The greatest distance from the rear-axle origin to the fixed chassis polygon.
-    if track['width'] / 4.0 <= math.hypot(0.45, 0.15) + track['resolution'] / 2.0:
+    # Include the wheel width as well as the chassis, relative to the rear axle.
+    vehicle_corners = [(x, y) for x in (-0.13, 0.45) for y in (-0.171, 0.171)]
+    if not _fits_right_lane(road, vehicle_corners, track['resolution'] / 2.0):
         raise ValueError('the configured lanes are too narrow for the F1TENTH footprint')
 
     count = _integer(traffic, 'count', 0)
@@ -113,7 +124,9 @@ def validate_config(config):
     for key, default in (('box_length', 0.90), ('box_width', 0.55), ('box_height', 0.45)):
         _number(traffic, key, positive=True, default=default)
     box_radius = math.hypot(traffic['box_length'], traffic['box_width']) / 2.0
-    if count and track['width'] / 4.0 <= box_radius + track['resolution'] / 2.0:
+    box_corners = [(x, y) for x in (-traffic['box_length'] / 2, traffic['box_length'] / 2)
+                   for y in (-traffic['box_width'] / 2, traffic['box_width'] / 2)]
+    if count and not _fits_right_lane(road, box_corners, track['resolution'] / 2.0):
         raise ValueError('the configured lanes are too narrow for the traffic boxes')
     lane = road.right_lane()
     if robot['spawn_s'] >= lane.length:
@@ -298,13 +311,13 @@ def _value(parent, tag, value):
 
 
 def _vehicle_include_attributes(config):
-    # The original vehicle and Hokuyo XMLs are copied verbatim from racing.
-    # Use the parameters already supported by their nested include.
+    # Bind steering and the nested Hokuyo include parameters to the scenario.
     lidar = config['lidar']
     bindings = {'sensor_x': 'x', 'sensor_y': 'y', 'sensor_z': 'z',
                 'fov_degrees': 'fov_degrees', 'sensor_period_sec': 'period',
                 'sensor_nrays': 'nrays', 'max_range': 'max_range'}
     return {'class_name': 'sci_ego', 'chassis_color': '#3080ff',
+            'max_steer_deg': str(config['robot']['max_steer_deg']),
             **{parameter: str(lidar[key]) for parameter, key in bindings.items()}}
 
 

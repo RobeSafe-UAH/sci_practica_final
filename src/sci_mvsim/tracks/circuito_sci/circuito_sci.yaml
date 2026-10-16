@@ -3,8 +3,8 @@
 image: circuito_sci.png
 resolution: 0.02
 origin:
-- -33.12
-- -21.12
+- -31.87
+- -19.87
 - 0.0
 negate: 0
 occupied_thresh: 0.45
@@ -15,5 +15,5 @@ sci_geometry:
   length: 60.0
   height: 36.0
   corner_radius: 8.0
-  width: 4.0
+  width: 1.5
   direction: ccw

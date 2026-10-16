@@ -1,0 +1,52 @@
+.md-typeset h1 {
+  color: var(--md-default-fg-color);
+  font-size: 2.1em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.md-typeset h2 {
+  border-bottom: 2px solid var(--md-primary-fg-color);
+  color: var(--md-primary-fg-color);
+  font-size: 1.45em;
+  font-weight: 700;
+  margin-top: 2em;
+  padding-bottom: 0.35em;
+}
+
+.md-typeset ol > li::marker {
+  color: var(--md-primary-fg-color);
+  font-weight: 700;
+}
+
+.sonar-layout {
+  align-items: center;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(11rem, 0.8fr) minmax(15rem, 1.2fr);
+  margin: 1rem 0;
+}
+
+.sonar-layout table {
+  width: 100%;
+}
+
+.sonar-layout td {
+  white-space: nowrap;
+}
+
+.sonar-figure p {
+  margin: 0;
+}
+
+.sonar-figure img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .sonar-layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,6 +1,6 @@
 <!--
   F1TENTH car (1/10 Ackermann) for MVSim, matching the f1tenth_gym model used by the RBSF stack:
-  wheelbase 0.3302 m, steering limit 24 deg (0.4189 rad), origin at the rear axle (base_link).
+  wheelbase 0.3302 m, steering limit configurable up to 45 deg, origin at the rear axle (base_link).
   Include it once per colour, giving each a class name:
     <include file=".../f1tenth.vehicle.xml" class_name="f1tenth_ego" chassis_color="#3080ff"
              meshes_dir=".../f1tenth_gym_ros/meshes"
@@ -57,7 +57,7 @@
         </fr_wheel>
         <f_wheels_x>0.3302</f_wheels_x>
         <f_wheels_d>0.296</f_wheels_d>
-        <max_steer_ang_deg>24.0</max_steer_ang_deg>
+        <max_steer_ang_deg>${max_steer_deg|45.0}</max_steer_ang_deg>
 
         <chassis mass="3.5" zmin="0.03" zmax="0.18" color="${chassis_color|#3080ff}">
             <shape>

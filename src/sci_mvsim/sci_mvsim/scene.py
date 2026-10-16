@@ -45,8 +45,9 @@ def _surface(config, map_yaml, paths, output):
 
     center, half = paths['centerline'], config['track']['width'] / 2
     wall = config['track']['wall_thickness']
+    edge_inset = min(0.18, config['track']['width'] * 0.04)
     for side in (-1, 1):
-        edge = [pixel(_offset(center, i, side * (half - 0.18)))
+        edge = [pixel(_offset(center, i, side * (half - edge_inset)))
                 for i in range(len(center.points))]
         draw.line(edge + edge[:1], fill='#e8edf2', width=max(1, round(0.08 / resolution)))
         for i in range(len(center.points)):
