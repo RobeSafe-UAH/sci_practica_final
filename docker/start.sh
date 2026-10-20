@@ -97,11 +97,26 @@ wait_for() {
 # Check the configurable web port before starting anything. The VNC backend
 # uses an ephemeral loopback port so an existing host VNC server is unaffected.
 vnc_port="$(python3 - "$SCI_VNC_PORT" <<'PY'
+import errno
 import socket
 import sys
 
+port = int(sys.argv[1])
 with socket.socket() as web, socket.socket() as vnc:
-    web.bind(('127.0.0.1', int(sys.argv[1])))
+    # Match the web server's reuse policy: TIME_WAIT connections from a
+    # previous session must not prevent an immediate restart.
+    web.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        web.bind(('127.0.0.1', port))
+    except OSError as error:
+        if error.errno != errno.EADDRINUSE:
+            raise
+        alternative = port + 1 if port < 65535 else 6080
+        sys.exit(
+            f'SCI: el puerto web {port} ya está en uso.\n'
+            f'Detén el servicio que lo ocupa o ejecuta: SCI_VNC_PORT={alternative} make run\n'
+            f'Navegador con el puerto alternativo: http://localhost:{alternative}/vnc.html'
+        )
     # Hold the web reservation while choosing VNC so the ports cannot coincide.
     vnc.bind(('127.0.0.1', 0))
     print(vnc.getsockname()[1])

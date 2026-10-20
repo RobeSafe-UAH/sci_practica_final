@@ -6,7 +6,7 @@ hide:
 
 ## Conexión
 
-1. Copiar `docker/.env.example` a `docker/.env` y editar `ROS_DOMAIN_ID` con el dominio elegido.
+1. Editar `ROS_DOMAIN_ID` en `docker/.env` con el dominio elegido.
 2. Usar el mismo dominio en el control y reiniciar el simulador para aplicar el cambio.
 
 ## Control

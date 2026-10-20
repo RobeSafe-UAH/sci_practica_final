@@ -6,6 +6,7 @@ Per-vehicle remapping follows rbsf-racing's rbsf_mvsim launch adapter pattern.
 import os
 from pathlib import Path
 import tempfile
+import xml.etree.ElementTree as ET
 
 from ament_index_python.packages import get_package_prefix
 from launch import LaunchDescription
@@ -13,7 +14,7 @@ from launch.actions import DeclareLaunchArgument, LogInfo, OpaqueFunction, Shutd
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-from sci_mvsim.world import build_world, load_config
+from sci_mvsim.world import build_world, load_config, prepare_world
 
 
 def simulation_remappings(robot):
@@ -28,7 +29,18 @@ def launch_setup(context):
     headless = LaunchConfiguration('headless').perform(context).lower()
     if headless not in ('true', 'false'):
         raise ValueError('headless must be true or false')
-    world_file = build_world(config, Path(tempfile.mkdtemp(prefix='sci_mvsim_')))
+    run_directory = Path(tempfile.mkdtemp(prefix='sci_mvsim_'))
+    cache_directory = os.environ.get('SCI_WORLD_CACHE')
+    if cache_directory:
+        cached_world = prepare_world(config, cache_directory)
+        world = ET.parse(cached_world)
+        signal = run_directory / 'scenario.start'
+        signal.write_text('0\n', encoding='ascii')
+        world.find("./element[@class='sci_start_gate']/start_file").text = str(signal)
+        world_file = run_directory / 'world.xml'
+        world.write(world_file, encoding='utf-8', xml_declaration=True)
+    else:
+        world_file = build_world(config, run_directory)
     start_gate = Path(get_package_prefix('sci_start_gate')) / 'lib' / 'libsci_start_gate.so'
     if not start_gate.is_file():
         raise RuntimeError(f'The native start gate is not installed: {start_gate}')

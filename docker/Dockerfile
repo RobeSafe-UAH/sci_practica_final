@@ -36,10 +36,17 @@ RUN source /opt/ros/jazzy/setup.bash \
     && colcon build --merge-install --packages-select sci_start_gate sci_mvsim \
         --event-handlers console_direct+
 
+COPY docker/config/ /opt/sci/config/
+RUN source /opt/ros/jazzy/setup.bash \
+    && source /opt/sci_ws/install/setup.bash \
+    && python3 -m sci_mvsim.world --config /opt/sci/config/scenario.yaml \
+        --prepare-world /opt/sci/world
+
 # Only the installed application crosses into the final image. Build sources,
 # build/log directories remain outside it.
 FROM dependencies AS runtime
 COPY --from=builder /opt/sci_ws/install/ /opt/sci_ws/install/
+COPY --from=builder --chown=sci:sci /opt/sci/world/ /opt/sci/world/
 COPY LICENSE /opt/sci/
 COPY docker/config/ /opt/sci/config/
 COPY docker/start.sh docker/healthcheck.py docker/fastdds.xml /opt/sci/docker/
@@ -55,6 +62,7 @@ ENV ROS_DOMAIN_ID=42 \
     FASTDDS_DEFAULT_PROFILES_FILE=/opt/sci/docker/fastdds.xml \
     ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET \
     SCI_CONFIG_FILE=/opt/sci/config/scenario.yaml \
+    SCI_WORLD_CACHE=/opt/sci/world \
     SCI_HEADLESS=false \
     SCI_VNC_PORT=6080 \
     SCI_SCREEN_WIDTH=1280 \

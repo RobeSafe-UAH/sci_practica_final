@@ -11,6 +11,8 @@ traffic blocks. Walls contain only thin occupied bands, as in RBSF's outline_map
 
 from copy import deepcopy
 import csv
+import hashlib
+import json
 import math
 import os
 from pathlib import Path
@@ -410,11 +412,54 @@ def build_world(config, out_dir):
     return destination
 
 
+def prepare_world(config, out_dir):
+    """Reuse generated assets until their configuration or source resources change."""
+    config = validate_config(config)
+    output = Path(out_dir).expanduser().resolve()
+    manifest = output / 'resources.json'
+    digest = hashlib.sha256(json.dumps(config, sort_keys=True).encode('utf-8'))
+    for name in ('world.py', 'scene.py', 'geometry.py'):
+        digest.update(name.encode('utf-8'))
+        digest.update(Path(__file__).with_name(name).read_bytes())
+    for name in ('definitions', 'models'):
+        directory = _resource_directory(name)
+        for resource in sorted(directory.rglob('*')):
+            if resource.is_file():
+                digest.update(f'{name}/{resource.relative_to(directory)}'.encode('utf-8'))
+                digest.update(resource.read_bytes())
+    fingerprint = digest.hexdigest()
+    try:
+        cached = json.loads(manifest.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        cached = {}
+    if (isinstance(cached, dict) and cached.get('fingerprint') == fingerprint
+            and cached.get('files')
+            and all((output / name).is_file() for name in cached['files'])):
+        return output / 'world.xml'
+
+    # An interrupted regeneration must never leave the previous cache valid.
+    manifest.unlink(missing_ok=True)
+    print('SCI: preparando los recursos del circuito...', flush=True)
+    world = build_world(config, output)
+    temporary = manifest.with_suffix('.tmp')
+    files = sorted(str(path.relative_to(output)) for path in output.rglob('*')
+                   if path.is_file() and path not in (manifest, temporary))
+    temporary.write_text(json.dumps({'fingerprint': fingerprint, 'files': files}), encoding='utf-8')
+    temporary.replace(manifest)
+    return world
+
+
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Export the configured SCI track as PNG, YAML and CSV')
+    parser = argparse.ArgumentParser(description='Prepare the SCI world or export its track')
     parser.add_argument('--config', required=True, type=Path)
-    parser.add_argument('--generate-track', required=True, type=Path, metavar='OUTPUT_DIRECTORY')
+    operation = parser.add_mutually_exclusive_group(required=True)
+    operation.add_argument('--generate-track', type=Path, metavar='OUTPUT_DIRECTORY')
+    operation.add_argument('--prepare-world', type=Path, metavar='OUTPUT_DIRECTORY')
     arguments = parser.parse_args()
-    print(generate_track(load_config(arguments.config), arguments.generate_track))
+    config = load_config(arguments.config)
+    if arguments.prepare_world is not None:
+        print(prepare_world(config, arguments.prepare_world))
+    else:
+        print(generate_track(config, arguments.generate_track))

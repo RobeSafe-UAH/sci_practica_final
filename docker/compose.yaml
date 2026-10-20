@@ -22,9 +22,13 @@ services:
       SCI_SCREEN_HEIGHT: ${SCI_SCREEN_HEIGHT:-800}
     volumes:
       - ./config:/opt/sci/config:ro
+      - world_cache:/opt/sci/world
     tmpfs:
       - /tmp:rw,nosuid,nodev,mode=1777
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  world_cache:

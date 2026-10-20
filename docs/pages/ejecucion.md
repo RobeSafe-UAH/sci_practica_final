@@ -6,15 +6,20 @@ hide:
 
 ## Construir y lanzar
 
-1. Desde la carpeta del proyecto, con Docker iniciado:
+1. Desde la carpeta del proyecto, con Docker iniciado, construir la imagen la primera vez o tras actualizar el código:
 
     ```bash
     make build
+    ```
+
+2. Lanzar la simulación:
+
+    ```bash
     make run
     ```
 
-2. Abrir el [simulador en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). Pulsar **Connect** si aparece la bienvenida.
-3. Mantener la terminal abierta. **Ctrl+C** detiene y elimina el contenedor.
+3. Abrir el [simulador en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). Pulsar **Connect** si aparece la bienvenida.
+4. Mantener la terminal abierta. **Ctrl+C** detiene y elimina el contenedor; la caché del circuito se conserva.
 
 ## Abrir una terminal del contenedor
 

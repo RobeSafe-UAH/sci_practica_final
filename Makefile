@@ -1,4 +1,4 @@
-COMPOSE ?= docker compose -f docker/compose.yaml
+COMPOSE ?= docker compose --env-file docker/.env -f docker/compose.yaml
 DOCS_PYTHON ?= docs/.venv/bin/python
 DOCS_OUTPUT ?= docs/site
 

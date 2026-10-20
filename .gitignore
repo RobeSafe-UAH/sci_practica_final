@@ -4,5 +4,6 @@ log/
 __pycache__/
 *.pyc
 .env
+!/docker/.env
 site/
 /docs/.venv/

@@ -28,7 +28,7 @@ hide:
 
 === "Windows"
 
-    1. Abrir PowerShell como administrador:
+    1. En **Windows 11 22H2 o posterior**, abrir PowerShell como administrador:
 
         ```powershell
         wsl --install -d Ubuntu
@@ -36,17 +36,37 @@ hide:
         ```
 
     2. Reiniciar y abrir Ubuntu para completar su configuración.
-    3. Instalar [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) con el motor WSL2 y contenedores Linux.
-    4. En Docker Desktop, activar Ubuntu en **Settings → Resources → WSL Integration**.
-    5. Activar **Settings → Resources → Network → Enable host networking** y aplicar los cambios.
-    6. En la terminal de Ubuntu, instalar Git y Make:
+    3. Crear o editar `%UserProfile%\.wslconfig` en Windows para activar la [red reflejada de WSL2](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking):
+
+        ```ini
+        [wsl2]
+        networkingMode=mirrored
+        ```
+
+    4. Aplicar los cambios desde PowerShell y volver a abrir Ubuntu:
+
+        ```powershell
+        wsl --shutdown
+        ```
+
+    5. En Ubuntu de WSL2, instalar Git y Make:
 
         ```bash
         sudo apt update
         sudo apt install -y git make
         ```
 
-    7. Ejecutar los comandos del proyecto desde Ubuntu de WSL2.
+    6. Instalar **Docker Engine y el complemento Compose dentro de Ubuntu**, siguiendo la [guía oficial](https://docs.docker.com/engine/install/ubuntu/).
+    7. Habilitar Docker para el usuario:
+
+        ```bash
+        sudo systemctl enable --now docker
+        sudo usermod -aG docker "$USER"
+        ```
+
+    8. Salir de Ubuntu y volver a entrar. Ejecutar los comandos del proyecto desde esa terminal.
+
+    9. Permitir la comunicación ROS en el [firewall de Windows y WSL](https://learn.microsoft.com/en-us/windows/wsl/networking#wsl-and-firewall) si el sistema solicita autorización para la red utilizada.
 
 === "macOS Intel"
 
@@ -56,8 +76,10 @@ hide:
         xcode-select --install
         ```
 
-    2. Instalar y abrir [Docker Desktop para Mac con chip Intel](https://docs.docker.com/desktop/setup/install/mac-install/).
-    3. Activar **Settings → Resources → Network → Enable host networking** y aplicar los cambios.
+    2. Instalar y abrir [OrbStack](https://docs.orbstack.dev/quick-start). Incluye Docker y Compose.
+    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Comprobar en **Networks** que existe la red **`bridge`**. Si se utiliza una máquina Linux de OrbStack, activar también **Settings → Machines → Expose ports to LAN**.
+    4. El contenedor utiliza el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional.
+    5. Como alternativa, instalar [Docker Desktop para Intel](https://docs.docker.com/desktop/setup/install/mac-install/), versión **4.34 o posterior**, y activar **Settings → Resources → Network → Enable host networking → Apply and restart**.
 
 === "macOS Apple Silicon"
 
@@ -67,8 +89,20 @@ hide:
         xcode-select --install
         ```
 
-    2. Instalar y abrir [Docker Desktop para Mac con chip Apple Silicon](https://docs.docker.com/desktop/setup/install/mac-install/).
-    3. Activar **Settings → Resources → Network → Enable host networking** y aplicar los cambios.
+    2. Instalar y abrir [OrbStack](https://docs.orbstack.dev/quick-start). Incluye Docker y Compose y ejecuta la imagen ARM64 de forma nativa.
+    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Comprobar en **Networks** que existe la red **`bridge`**. Si se utiliza una máquina Linux de OrbStack, activar también **Settings → Machines → Expose ports to LAN**.
+    4. El contenedor utiliza el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional.
+    5. Como alternativa, instalar [Docker Desktop para Apple Silicon](https://docs.docker.com/desktop/setup/install/mac-install/), versión **4.34 o posterior**, y activar **Settings → Resources → Network → Enable host networking → Apply and restart**.
+
+1. Si Docker se ejecuta en VirtualBox, VMware u otra máquina virtual, configurar su adaptador en modo **puente (`bridge`)**. El simulador y el equipo de control deben estar en la misma red.
+2. Comprobar que Docker y Compose están disponibles:
+
+    ```bash
+    docker info
+    docker compose version
+    ```
+
+3. El entorno gráfico se abre en el navegador; no requiere XQuartz, WSLg ni GPU dedicada.
 
 ## Obtener y construir el proyecto
 
@@ -79,10 +113,11 @@ hide:
     cd sci_practica_final
     ```
 
-2. Construir la imagen:
+2. Editar **`ROS_DOMAIN_ID`** en **`docker/.env`** con el dominio elegido. Usar el mismo valor en el control.
+3. Construir la imagen:
 
     ```bash
     make build
     ```
 
-3. Continuar en [Ejecución](ejecucion.md).
+4. Continuar en [Ejecución](ejecucion.md).

@@ -3,8 +3,8 @@ track:
   # Four straights joined by circular curves, two lanes in opposite directions.
   name: circuito_sci
   shape: rounded_rectangle
-  length: 60.0
-  height: 36.0
+  length: 40.0
+  height: 26.0
   corner_radius: 8.0
   width: 1.5  # Two lanes, 0.75 m each.
   direction: ccw
@@ -17,13 +17,13 @@ robot:
   max_speed: 27.77777777777778  # 100 km/h, expressed in m/s.
   max_steer_deg: 45.0
 traffic:
-  count: 2  # Integer from 0 to 6; initial positions are calculated automatically.
-  speed: 0.35
+  count: 1  # Integer from 0 to 6; initial positions are calculated automatically.
+  speed: 1
   start_distance: 5.0
   spacing: 12.0
-  box_length: 0.90
-  box_width: 0.55
-  box_height: 0.45
+  box_length: 0.70
+  box_width: 0.45
+  box_height: 0.35
 lidar:
   x: 0.27
   y: 0.0

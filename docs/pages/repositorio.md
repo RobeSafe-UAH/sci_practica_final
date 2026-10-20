@@ -11,7 +11,7 @@ hide:
     | Archivo | Uso |
     |---|---|
     | `config/scenario.yaml` | Circuito, vehículo, cajas y sensores. |
-    | `.env` | Dominio ROS y puerto del navegador; crear a partir de `.env.example`. |
+    | `.env` | Dominio ROS y puerto del navegador. |
     | `Dockerfile` | Dependencias y construcción de la imagen. |
     | `compose.yaml` | Servicio del simulador. |
     | `start.sh` | Arranque y cierre de la simulación y del escritorio web. |
@@ -37,9 +37,9 @@ hide:
 
     | Parámetro | Uso |
     |---|---|
-    | `track.length`, `track.height` | Dimensiones de la línea central: 60 × 36 m. |
-    | `track.corner_radius` | Radio de las curvas: 8 m. |
-    | `track.width` | Anchura total: 1,50 m, con dos carriles de 0,75 m. |
+    | `track.length`, `track.height` | Dimensiones de la línea central, en metros. |
+    | `track.corner_radius` | Radio de las curvas, en metros. |
+    | `track.width` | Anchura total de la carretera, dividida en dos carriles iguales. |
     | `robot.max_speed` | Velocidad máxima en m/s: 27,77777777777778 = 100 km/h. |
     | `robot.max_steer_deg` | Límite de dirección en grados: 45, para un rango de −45° a +45°. |
     | `traffic.count` | Número de cajas, de 0 a 6. |
@@ -48,7 +48,7 @@ hide:
     | `traffic.box_length`, `traffic.box_width`, `traffic.box_height` | Dimensiones de las cajas, en metros. |
     | `lidar` | Posición, cobertura, frecuencia y alcance del Hokuyo. |
 
-2. Reiniciar con **Ctrl+C** y `make run` para aplicar los parámetros. Tras cambiar código o definiciones XML, ejecutar también `make build`.
+2. Reiniciar con **Ctrl+C** y `make run` para aplicar los parámetros. Los recursos generados se guardan en un volumen de Docker y se reutilizan mientras no cambien la configuración o los recursos del simulador. Tras cambiar código o definiciones XML, ejecutar también `make build`.
 
 ## Funcionamiento
 

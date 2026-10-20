@@ -85,7 +85,8 @@ def _surface(config, map_yaml, paths, output):
             draw.polygon([pixel((x + c * a - s * b, y + s * a + c * b))
                           for a, b in corners],
                          fill='#edf0ed' if (row + column) % 2 else '#343940')
-    floor.save(output / 'circuit_surface.png')
+    # MVSim maps the first texture row to y_min; ROS maps put y_max there.
+    floor.transpose(Image.Transpose.FLIP_TOP_BOTTOM).save(output / 'circuit_surface.png')
     return origin, (floor.width * resolution, floor.height * resolution)
 
 
