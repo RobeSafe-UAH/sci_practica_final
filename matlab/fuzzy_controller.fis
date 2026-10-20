@@ -1,0 +1,148 @@
+[System]
+Name='fuzzy_controllerUSE_8sonares_v2'
+Type='mamdani'
+Version=2.0
+NumInputs=8
+NumOutputs=2
+NumRules=37
+AndMethod='min'
+OrMethod='max'
+ImpMethod='min'
+AggMethod='max'
+DefuzzMethod='centroid'
+
+[Input1]
+Name='sonar_0'
+Range=[0 30]
+NumMFs=3
+MF1='critico':'trapmf',[0 0 0.12 0.2]
+MF2='proximo':'trimf',[0.18 0.44 0.85]
+MF3='libre':'trapmf',[0.7 0.95 30 30]
+
+[Input2]
+Name='sonar_1'
+Range=[0 30]
+NumMFs=6
+MF1='critico':'trapmf',[0 0 0.13 0.22]
+MF2='cerca':'trapmf',[0.19 0.25 0.32 0.38]
+MF3='carril':'trimf',[0.345 0.405 0.47]
+MF4='libre':'trapmf',[0.44 0.7 30 30]
+MF5='valido':'trapmf',[0 0 30 30]
+MF6='retorno_libre':'trapmf',[0.75 0.95 30 30]
+
+[Input3]
+Name='sonar_2'
+Range=[0 30]
+NumMFs=5
+MF1='critico':'trapmf',[0 0 0.17 0.28]
+MF2='cerca':'trapmf',[0.24 0.34 0.46 0.515]
+MF3='carril':'trimf',[0.49 0.535 0.62]
+MF4='libre':'trapmf',[0.55 0.85 30 30]
+MF5='retorno_libre':'trapmf',[0.9 1.15 30 30]
+
+[Input4]
+Name='sonar_3'
+Range=[0 30]
+NumMFs=6
+MF1='critico':'trapmf',[0 0 0.2 0.4]
+MF2='curva':'trapmf',[0.35 0.85 1.35 1.95]
+MF3='anticipacion':'trimf',[1.5 2.25 3.1]
+MF4='recta':'trapmf',[2.7 3.5 30 30]
+MF5='muy_cerca':'trapmf',[0.2 0.4 0.65 0.95]
+MF6='despejado':'trapmf',[1.5 2.25 30 30]
+
+[Input5]
+Name='sonar_4'
+Range=[0 30]
+NumMFs=5
+MF1='critico':'trapmf',[0 0 0.2 0.4]
+MF2='cerrado':'trapmf',[0.3 0.8 1.8 2.8]
+MF3='precaucion':'trimf',[2.1 3.3 4.8]
+MF4='libre':'trapmf',[4 5 30 30]
+MF5='margen_izquierdo':'trapmf',[0.2 0.4 1.4 2.6]
+
+[Input6]
+Name='sonar_5'
+Range=[0 30]
+NumMFs=4
+MF1='critico':'trapmf',[0 0 0.17 0.28]
+MF2='proximo':'trapmf',[0.24 0.45 0.8 1.25]
+MF3='libre':'trapmf',[1.05 1.45 30 30]
+MF4='paso':'trapmf',[0.65 0.95 30 30]
+
+[Input7]
+Name='sonar_6'
+Range=[0 30]
+NumMFs=4
+MF1='critico':'trapmf',[0 0 0.13 0.22]
+MF2='cerca':'trimf',[0.19 0.27 0.36]
+MF3='paso':'trimf',[0.3 0.5 0.8]
+MF4='libre':'trapmf',[0.7 1.05 30 30]
+
+[Input8]
+Name='sonar_7'
+Range=[0 30]
+NumMFs=3
+MF1='critico':'trapmf',[0 0 0.12 0.2]
+MF2='proximo':'trimf',[0.18 0.44 0.85]
+MF3='libre':'trapmf',[0.7 0.95 30 30]
+
+[Output1]
+Name='V'
+Range=[0 15]
+NumMFs=4
+MF1='maniobra':'trimf',[1.5 3 4.5]
+MF2='curva':'trimf',[6.5 8.5 10.5]
+MF3='rapido':'trapmf',[12 14 15 15]
+MF4='parado':'trapmf',[0 0 0.5 1.5]
+
+[Output2]
+Name='W'
+Range=[-45 45]
+NumMFs=7
+MF1='izquierda_fuerte':'trapmf',[30 40 45 45]
+MF2='izquierda':'trimf',[14 24 34]
+MF3='izquierda_suave':'trimf',[3 10 18]
+MF4='derecha_fuerte':'trapmf',[-45 -45 -40 -30]
+MF5='derecha':'trimf',[-34 -24 -14]
+MF6='derecha_suave':'trimf',[-18 -10 -3]
+MF7='recto':'trimf',[-5 0 5]
+
+[Rules]
+1 1 1 1 1 1 1 1, 4 0 (1) : 2
+0 5 0 0 0 0 0 0, 4 7 (0.0001) : 1
+-1 -1 -1 2 -1 -1 -1 -1, 1 0 (1) : 1
+-1 -1 -1 3 2 -1 -1 -1, 1 0 (1) : 1
+-1 -1 -1 3 3 3 4 -1, 2 0 (1) : 1
+-1 -1 -1 3 4 3 4 -1, 2 0 (1) : 1
+-1 -1 -1 4 2 -1 -1 -1, 1 0 (1) : 1
+-1 -1 -1 4 3 3 4 -1, 2 0 (1) : 1
+-1 -1 -1 4 4 3 4 -1, 3 0 (1) : 1
+-1 -1 -1 5 -1 -1 -1 -1, 1 0 (1) : 1
+-1 -1 -1 -1 5 -1 -1 -1, 1 0 (1) : 1
+-1 -1 -1 -1 -1 2 -1 -1, 1 0 (1) : 1
+-1 -1 -1 -1 -1 -1 2 -1, 1 0 (1) : 1
+-1 -1 -1 -1 -1 -1 3 -1, 1 0 (1) : 1
+-1 2 -1 -1 -1 -1 -1 -1, 1 0 (1) : 1
+-1 -1 2 -1 -1 -1 -1 -1, 1 0 (1) : 1
+0 3 3 6 -5 3 4 0, 0 7 (1) : 1
+0 2 3 6 -5 3 4 0, 0 3 (1) : 1
+0 3 4 6 -5 3 4 0, 0 6 (1) : 1
+0 0 2 0 -5 3 4 0, 0 3 (1) : 1
+0 2 0 0 -5 3 4 0, 0 3 (1) : 1
+0 0 0 3 -5 3 4 0, 0 3 (1) : 1
+0 0 -1 2 -5 3 4 0, 0 2 (1) : 1
+0 1 0 0 -5 4 4 0, 0 1 (1) : 1
+0 0 1 0 -5 4 4 0, 0 1 (1) : 1
+0 0 0 5 -5 4 4 0, 0 1 (1) : 1
+0 4 4 0 5 0 0 0, 0 4 (1) : 1
+0 4 4 0 0 2 0 0, 0 5 (1) : 1
+0 4 4 0 0 0 2 0, 0 5 (1) : 1
+0 4 4 0 0 0 3 0, 0 6 (1) : 1
+0 4 4 0 0 1 0 0, 0 4 (1) : 1
+0 4 4 0 0 0 1 0, 0 4 (1) : 1
+0 4 4 0 0 0 0 1, 0 5 (1) : 1
+3 4 4 4 -5 0 0 0, 0 6 (1) : 1
+3 6 5 4 -5 0 0 0, 0 5 (1) : 1
+0 3 3 -5 -5 2 3 0, 0 7 (1) : 1
+0 3 3 -5 -5 2 2 0, 0 7 (1) : 1
