@@ -16,6 +16,10 @@ import re
 import time
 
 
+MAX_FORWARD_SPEED_MPS = 50.0 / 3.6
+MAX_STEERING_RAD = math.pi / 4.0
+
+
 def sonar_means(ranges, minimum: float, maximum: float, count: int = 8) -> tuple[float, ...]:
     """Average the finite valid rays in consecutive equal-angle scan cones.
 
@@ -98,8 +102,9 @@ def sensor_frames(config: dict) -> tuple[str, tuple[SensorFrame, ...]]:
 
 def ackermann_command(speed: float, yaw_rate: float, max_speed: float,
                       wheelbase: float, max_steer: float) -> tuple[float, float]:
-    """Bound a finite Twist to the configured Ackermann kinematics.
+    """Bound a finite Twist to forward-only Ackermann motion.
 
+    Configuration can tighten the absolute limits of 50 km/h and 45 degrees.
     max_steer is in radians. A stationary Ackermann car cannot turn in place.
     """
     if not all(math.isfinite(value) for value in (speed, yaw_rate, max_speed,
@@ -107,8 +112,10 @@ def ackermann_command(speed: float, yaw_rate: float, max_speed: float,
         raise ValueError('Commands and vehicle limits must be finite')
     if max_speed <= 0 or wheelbase <= 0 or not 0 < max_steer < math.pi / 2:
         raise ValueError('Invalid Ackermann limits')
-    speed = max(-max_speed, min(max_speed, speed))
-    angular_limit = abs(speed) * math.tan(max_steer) / wheelbase
+    speed = max(0.0, min(max_speed, MAX_FORWARD_SPEED_MPS, speed))
+    if speed == 0.0:
+        return 0.0, 0.0
+    angular_limit = speed * math.tan(min(max_steer, MAX_STEERING_RAD)) / wheelbase
     return speed, max(-angular_limit, min(angular_limit, yaw_rate))
 
 
@@ -120,15 +127,19 @@ class CommandWatchdog:
         if not math.isfinite(timeout) or timeout <= 0:
             raise ValueError('The command timeout must be positive')
         ackermann_command(0.0, 0.0, max_speed, wheelbase, max_steer)
-        self.limits = max_speed, wheelbase, max_steer
+        self.limits = (min(max_speed, MAX_FORWARD_SPEED_MPS), wheelbase,
+                       min(max_steer, MAX_STEERING_RAD))
         self.timeout = timeout
+        self.clear()
+
+    def clear(self):
+        """Discard the previous command so an error cannot replay it."""
         self.received_at = None
         self.latest = (0.0, 0.0)
 
     def accept(self, speed: float, yaw_rate: float, now: float) -> tuple[float, float]:
         """Invalid commands clear the previous command and fail closed."""
-        self.latest = (0.0, 0.0)
-        self.received_at = None
+        self.clear()
         if not math.isfinite(now):
             raise ValueError('A finite monotonic timestamp is required')
         self.latest = ackermann_command(speed, yaw_rate, *self.limits)
@@ -175,8 +186,9 @@ def make_bridge_class():
             self.lidar_fov = math.radians(config['lidar']['fov_degrees'])
             robot = config['robot']
             self.watchdog = CommandWatchdog(
-                float(robot.get('max_speed', 100.0 / 3.6)), float(robot['wheelbase']),
-                math.radians(float(robot.get('max_steer_deg', 45.0))), timeout=1.0)
+                float(robot.get('max_speed', MAX_FORWARD_SPEED_MPS)), float(robot['wheelbase']),
+                math.radians(float(robot.get('max_steer_deg', math.degrees(MAX_STEERING_RAD)))),
+                timeout=1.0)
 
             self.cmd_pub = self.create_publisher(Twist, f'{self.raw_prefix}/cmd_vel', 10)
             self.scan_pub = self.create_publisher(LaserScan, f'/{self.robot}/scan', 10)
@@ -225,7 +237,15 @@ def make_bridge_class():
             self.static_tf_pub.sendTransform(transforms)
 
         def publish_command(self, command):
-            self.start_signal.update(command[0] != 0.0)
+            try:
+                self.start_signal.update(command[0] != 0.0)
+            except OSError:
+                # A failed native-gate update must not preserve the previous
+                # ROS command. Stop over ROS, then let launch shut both nodes
+                # down instead of continuing with an inconsistent gate state.
+                self.watchdog.clear()
+                self.cmd_pub.publish(Twist())
+                raise
             msg = Twist()
             msg.linear.x, msg.angular.z = command
             self.cmd_pub.publish(msg)
@@ -314,11 +334,19 @@ def main(args=None):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
-        if node is not None:
-            if rclpy.ok():
-                node.publish_command((0.0, 0.0))
-            node.destroy_node()
-        rclpy.try_shutdown()
+        try:
+            if node is not None:
+                try:
+                    if rclpy.ok():
+                        node.publish_command((0.0, 0.0))
+                    else:
+                        # ROS may already be shut down after SIGINT. The native
+                        # hold is still useful until MVSim itself exits.
+                        node.start_signal.update(False)
+                finally:
+                    node.destroy_node()
+        finally:
+            rclpy.try_shutdown()
 
 
 if __name__ == '__main__':

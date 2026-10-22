@@ -128,16 +128,6 @@ hide:
     4. El contenedor utiliza el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional.
     5. Como alternativa, instalar [Docker Desktop para Apple Silicon](https://docs.docker.com/desktop/setup/install/mac-install/), versión **4.34 o posterior**, y activar **Settings → Resources → Network → Enable host networking → Apply and restart**.
 
-1. Si Docker se ejecuta en VirtualBox, VMware u otra máquina virtual, configurar su adaptador en modo **puente (`bridge`)**. El simulador y el equipo de control deben estar en la misma red.
-2. Comprobar que Docker y Compose están disponibles:
-
-    ```bash
-    docker info
-    docker compose version
-    ```
-
-3. El entorno gráfico se abre en el navegador; no requiere XQuartz, WSLg ni GPU dedicada.
-
 ## Obtener y construir el proyecto
 
 1. Iniciar Docker y descargar el proyecto:

@@ -29,12 +29,12 @@ hide:
 
     | Campo | Significado | Unidad |
     |---|---|---|
-    | `linear.x` | Velocidad longitudinal; positiva hacia delante. | m/s |
+    | `linear.x` | Velocidad de avance, entre 0 y 13,89 m/s. | m/s |
     | `angular.z` | Velocidad angular; positiva hacia la izquierda. | rad/s |
 
-2. Límites: **100 km/h (27,78 m/s)** de velocidad y **−45° a +45°** de dirección del vehículo.
-3. El coche y las cajas permanecen parados hasta recibir el primer mensaje en `/r0/cmd_vel`.
-4. Una orden con `linear.x = 0` mantiene el coche inmóvil. También se detiene si pasa un segundo sin recibir órdenes. Las cajas continúan circulando.
+2. Límites: **0 a 50 km/h (0 a 13,89 m/s)** de velocidad y **−45° a +45°** de dirección del vehículo. Las velocidades negativas se convierten en cero; el coche solo avanza.
+3. Todos los coches permanecen parados hasta recibir el primer mensaje en `/r0/cmd_vel`. Los coches de tráfico son **naranjas** y circulan por el carril derecho.
+4. Una orden con `linear.x = 0` mantiene el coche del alumno inmóvil. También se detiene si pasa un segundo sin recibir órdenes. Los coches de tráfico continúan circulando.
 
 ## Colisiones
 

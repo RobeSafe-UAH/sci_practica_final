@@ -72,8 +72,8 @@ def _surface(config, map_yaml, paths, output):
             draw.polygon([pixel((x + c * u - s * v, y + s * u + c * v))
                           for u, v in arrow], fill='#dce3e7')
 
-    # A painted start line on the first straight, ahead of the initial ego pose.
-    x, y, yaw = center.pose_at(config['robot']['spawn_s'] + 2.0)
+    # The start/finish line shares the initial rear-axle cross-section.
+    x, y, yaw = center.pose_at(config['robot']['spawn_s'])
     c, s = math.cos(yaw), math.sin(yaw)
     columns = max(2, round(2 * half / 0.2))
     square = 2 * half / columns

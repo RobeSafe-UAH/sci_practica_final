@@ -68,12 +68,11 @@
             </shape>
         </chassis>
 
-        <!-- Tracks geometry_msgs/Twist on cmd_vel (rbsf_mvsim's ackermann_to_twist feeds it). -->
+        <!-- Velocity loop for the 20 Hz physics step; commands are bounded by the bridge. -->
         <controller class="twist_front_steer_pid">
-            <KP>15.0</KP>
-            <KI>2.0</KI>
-            <I_MAX>15.0</I_MAX>
-            <KD>0.5</KD>
+            <KP>1.5</KP>
+            <KI>0.0</KI>
+            <KD>0.0</KD>
             <V>0.0</V>
             <W>0.0</W>
             <max_torque>25.0</max_torque>

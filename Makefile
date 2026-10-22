@@ -20,7 +20,12 @@ attach:
 	$(COMPOSE) exec simulator bash
 	
 run:
-	@trap '$(COMPOSE) down' EXIT; \
+	@running_simulator="$$($(COMPOSE) ps --status running --quiet simulator)" || exit $$?; \
+	  if [ -n "$$running_simulator" ]; then \
+	    printf '%s\n' 'La simulación ya está en ejecución; usa make attach para abrir otra terminal.' >&2; \
+	    exit 1; \
+	  fi; \
+	  trap '$(COMPOSE) down' EXIT; \
 	  trap 'exit 130' INT; \
 	  trap 'exit 143' TERM; \
 	  $(COMPOSE) up --no-build --pull never --abort-on-container-exit --exit-code-from simulator

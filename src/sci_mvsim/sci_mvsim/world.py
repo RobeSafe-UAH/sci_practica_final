@@ -24,6 +24,7 @@ from PIL import Image, ImageChops, ImageDraw
 import yaml
 
 from .geometry import ClosedPath, RoundedRectangleTrack, wrap_angle
+from .bridge import MAX_FORWARD_SPEED_MPS, MAX_STEERING_RAD
 from .scene import add_scene
 
 
@@ -105,9 +106,11 @@ def validate_config(config):
     if not math.isclose(robot['wheelbase'], 0.3302, rel_tol=0, abs_tol=1e-9):
         raise ValueError('wheelbase must match the original f1tenth.vehicle.xml: 0.3302 m')
     _number(robot, 'spawn_s', nonnegative=True)
-    _number(robot, 'max_speed', positive=True, default=100.0 / 3.6)
+    _number(robot, 'max_speed', positive=True, default=MAX_FORWARD_SPEED_MPS)
+    if robot['max_speed'] > MAX_FORWARD_SPEED_MPS + 1e-12:
+        raise ValueError('robot.max_speed must not exceed 50 km/h (13.88888888888889 m/s)')
     steering = _number(robot, 'max_steer_deg', positive=True, default=45.0)
-    if steering > 45.0:
+    if math.radians(steering) > MAX_STEERING_RAD:
         raise ValueError('max_steer_deg must not exceed 45 degrees')
     if robot['wheelbase'] / math.tan(math.radians(steering)) >= road.min_radius + road.right_offset:
         raise ValueError('the right lane requires more steering than the robot permits')
@@ -124,13 +127,7 @@ def validate_config(config):
         raise ValueError('traffic.speed must be below robot.max_speed')
     _number(traffic, 'start_distance', positive=True, default=5.0)
     _number(traffic, 'spacing', positive=True, default=12.0)
-    for key, default in (('box_length', 0.90), ('box_width', 0.55), ('box_height', 0.45)):
-        _number(traffic, key, positive=True, default=default)
-    box_radius = math.hypot(traffic['box_length'], traffic['box_width']) / 2.0
-    box_corners = [(x, y) for x in (-traffic['box_length'] / 2, traffic['box_length'] / 2)
-                   for y in (-traffic['box_width'] / 2, traffic['box_width'] / 2)]
-    if count and not _fits_right_lane(road, box_corners, track['resolution'] / 2.0):
-        raise ValueError('the configured lanes are too narrow for the traffic boxes')
+    car_radius = max(math.hypot(x, y) for x, y in vehicle_corners)
     lane = road.right_lane()
     if robot['spawn_s'] >= lane.length:
         raise ValueError('spawn_s must be smaller than the right-lane lap length')
@@ -139,9 +136,9 @@ def validate_config(config):
         raise ValueError('traffic positions exceed one lap; reduce count, start_distance or spacing')
     offsets = sorted([0.0, *distances])
     gaps = [b - a for a, b in zip(offsets, offsets[1:] + [lane.length])]
-    minimum_gap = max(1.0, 2.0 * box_radius + 0.1)
+    minimum_gap = max(1.0, 2.0 * car_radius + 0.1)
     if count and any(gap < minimum_gap for gap in gaps):
-        raise ValueError('traffic positions must leave space between the boxes and the vehicle')
+        raise ValueError('traffic positions must leave space between the vehicles')
 
     lidar, sonar = config['lidar'], config['sonar']
     _number(lidar, 'fov_degrees', positive=True)
@@ -330,7 +327,7 @@ def _traffic_animation(block, lane, initial_s, speed):
     """Use equally spaced arc-length frames and native MVSim automatic looping."""
     animation = ET.SubElement(block, 'animation', type='keyframes')
     period = lane.length / speed
-    frames = math.ceil(period / 0.2)  # <= 7 cm per keyframe at the default 0.35 m/s.
+    frames = math.ceil(period / 0.2)
     first = lane.pose_at(initial_s)
     previous_yaw = first[2]
     unwrapped_yaw = first[2]
@@ -362,6 +359,9 @@ def build_world(config, out_dir):
         shutil.copyfile(source, definitions / source.name)
     models = output / 'models' / 'f1tenth'
     shutil.copytree(_resource_directory('models') / 'f1tenth', models, dirs_exist_ok=True)
+    # MVSim caches meshes by path, so each colour needs its own accent resource.
+    traffic_accent = models / 'roboracer_traffic_accent.stl'
+    shutil.copyfile(models / 'roboracer_accent.stl', traffic_accent)
     track_directory = output / 'tracks' / config['track']['name']
     copied_track = generate_track(config, track_directory)
     map_yaml = outline_map(copied_track, output, config['track']['wall_thickness'])
@@ -390,11 +390,7 @@ def build_world(config, out_dir):
                   **_vehicle_include_attributes(config))
     traffic = config['traffic']
     ET.SubElement(world, 'include', file=str(definitions / 'traffic.block.xml'),
-                  box_x_min=str(-traffic['box_length'] / 2.0),
-                  box_x_max=str(traffic['box_length'] / 2.0),
-                  box_y_min=str(-traffic['box_width'] / 2.0),
-                  box_y_max=str(traffic['box_width'] / 2.0),
-                  box_height=str(traffic['box_height']))
+                  meshes_dir=str(models), accent_mesh=str(traffic_accent))
     ego = ET.SubElement(world, 'vehicle', name=config['robot']['name'], **{'class': 'sci_ego'})
     x, y, yaw = right_lane.pose_at(config['robot']['spawn_s'])
     _value(ego, 'init_pose', f'{x:.7f} {y:.7f} {math.degrees(yaw):.7f}')
