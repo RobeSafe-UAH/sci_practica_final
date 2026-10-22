@@ -12,5 +12,6 @@ site/
 *.fis
 /matlab/*
 !/matlab/ackerman_ROS2_controller.slx
+!/matlab/ackerman_ROS2_controller2023.slx
 !/matlab/controller_ros2.m
 !/matlab/evaluate_controller.m
