@@ -34,6 +34,7 @@ hide:
 
 2. Límites: **100 km/h (27,78 m/s)** de velocidad y **−45° a +45°** de dirección del vehículo.
 3. El coche y las cajas permanecen parados hasta recibir el primer mensaje en `/r0/cmd_vel`.
+4. Una orden con `linear.x = 0` mantiene el coche inmóvil. También se detiene si pasa un segundo sin recibir órdenes. Las cajas continúan circulando.
 
 ## Colisiones
 

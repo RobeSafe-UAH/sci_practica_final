@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Extension of the public MVSim 1.5 WorldElement API; the original vehicle XML,
 // controller, collision fixtures and sensor definitions are left unchanged.
-// The gate opens once on the first ROS command; it never reacts to obstacles.
+// Traffic starts on the first ROS command; zero/expired commands hold ego still.
 #include <mvsim/Block.h>
 #include <mvsim/VehicleBase.h>
 #include <mvsim/World.h>
@@ -70,18 +70,22 @@ class StartGate final : public mvsim::WorldElementBase
       vehicle_ = it->second;
       lock_ = std::make_unique<InitialLock>(*vehicle_->b2d_body());
     }
-    if (!started_)
+    std::ifstream signal(start_file_);
+    int motion = 0;  // 0: waiting, 1: driving, 2: stopped after starting.
+    signal >> motion;
+    if (!started_ && (motion == 1 || motion == 2))
     {
-      std::ifstream signal(start_file_);
-      double value = 0.0;
-      if ((signal >> value) && value == 1.0)
-      {
-        started_ = true;
-        start_time_ = context.simul_time;
-      }
+      started_ = true;
+      start_time_ = context.simul_time;
     }
-    lock_->update(started_);
-    if (!started_) vehicle_->setRefVelocityLocal({0.0, 0.0, 0.0});
+    const bool moving = started_ && motion == 1;
+    lock_->update(moving);
+    if (!moving)
+    {
+      vehicle_->setRefVelocityLocal({0.0, 0.0, 0.0});
+      for (size_t i = 0; i < vehicle_->getNumWheels(); ++i)
+        vehicle_->getWheelInfo(i).setW(0.0);
+    }
 
     // Reuse MVSim's native keyframes, with a clock frozen at zero until the
     // first command. Elapsed traffic time then advances independently of ego.

@@ -49,62 +49,88 @@ estadisticas = struct('tiempoTotal_s', T, 'vuelta_pct', vuelta, ...
 disp(estadisticas);
 if ~graficar, return; end
 
-azul = [0.12 0.28 0.45]; rojo = [0.65 0.22 0.16]; gris = [0.45 0.45 0.45];
+azul = [0.13 0.35 0.58]; rojo = [0.70 0.20 0.19];
+texto = [0.12 0.18 0.25]; gris = [0.43 0.47 0.51];
 pantalla = get(groot,'ScreenSize');
+tamano = min([1240 800],max([900 650],pantalla(3:4)-[60 110]));
 fig = figure('Name','Evaluación del controlador — SCI','NumberTitle','off', ...
-    'Color','w','Position',[30 40 min(1200,pantalla(3)-60) min(760,pantalla(4)-110)]);
+    'Color','w','Position',[30 40 tamano]);
+annotation(fig,'textbox',[0.045 0.925 0.91 0.045], ...
+    'String','Evaluación del controlador','FontName','Arial','FontSize',19, ...
+    'FontWeight','bold','Color',texto,'EdgeColor','none','Margin',0);
+annotation(fig,'textbox',[0.045 0.895 0.91 0.025], ...
+    'String','SCI  ·  Circuito 40 × 26 m  ·  Sentido antihorario', ...
+    'FontName','Arial','FontSize',10,'Color',gris,'EdgeColor','none','Margin',0);
+annotation(fig,'line',[0.045 0.955],[0.88 0.88],'Color',[0.80 0.83 0.86]);
+etiquetas = {'Tiempo total','Vuelta recorrida','Carril contrario'};
+valores = {sprintf('%.2f s',T),sprintf('%.1f %%',vuelta), ...
+    sprintf('%.1f %%',estadisticas.invasion_pct)};
+detalles = {'Duración del registro','Avance sobre el circuito', ...
+    sprintf('%.2f s de invasión',estadisticas.tiempoInvasion_s)};
+for k = 1:3
+    izquierda = 0.045+(k-1)*0.315;
+    color = texto;
+    if k == 3, color = rojo; end
+    annotation(fig,'textbox',[izquierda 0.831 0.28 0.025],'String',etiquetas{k}, ...
+        'FontName','Arial','FontSize',11,'FontWeight','bold', ...
+        'Color',color,'EdgeColor','none','Margin',0);
+    annotation(fig,'textbox',[izquierda 0.776 0.28 0.048],'String',valores{k}, ...
+        'FontName','Arial','FontSize',24,'Color',color,'EdgeColor','none','Margin',0);
+    annotation(fig,'textbox',[izquierda 0.749 0.28 0.023],'String',detalles{k}, ...
+        'FontName','Arial','FontSize',10,'Color',gris,'EdgeColor','none','Margin',0);
+end
 disposicion = tiledlayout(fig,2,2,'TileSpacing','compact','Padding','compact');
-title(disposicion,'Evaluación del controlador','FontName','Arial', ...
-    'FontSize',15,'FontWeight','normal');
-subtitle(disposicion,sprintf(['Tiempo total: %.2f s   |   Vuelta recorrida: %.1f %%\n' ...
-    '{\\color[rgb]{0.65 0.22 0.16}Carril contrario}: %.2f s (%.1f %%)'], ...
-    T,vuelta,estadisticas.tiempoInvasion_s,estadisticas.invasion_pct), ...
-    'Interpreter','tex','FontName','Arial','FontSize',10);
+disposicion.OuterPosition = [0.025 0.065 0.95 0.645];
 
 trayectoria = nexttile(disposicion,1,[2 1]);
 hold(trayectoria,'on');
 for r = [radio+ancho/2, radio-ancho/2]
     p = centros+r*u;
-    color = [0.92 0.92 0.92];
+    color = [0.90 0.93 0.95];
     if r < radio, color = [1 1 1]; end
     patch(trayectoria,p(:,1),p(:,2),color,'EdgeColor',gris,'LineWidth',0.8);
 end
 plot(trayectoria,pista([1:end 1],1),pista([1:end 1],2),'--','Color',gris,'LineWidth',0.8);
-recorrido = plot(trayectoria,x,y,'Color',azul,'LineWidth',1.5);
-contrario = scatter(trayectoria,x(invade),y(invade),10,rojo,'filled');
+recorrido = plot(trayectoria,x,y,'Color',azul,'LineWidth',1.8);
+contrario = scatter(trayectoria,x(invade),y(invade),12,rojo,'filled');
 inicio = plot(trayectoria,x(1),y(1),'o','Color',azul, ...
     'MarkerFaceColor','w','MarkerSize',7,'LineWidth',1.2);
 final = plot(trayectoria,x(end),y(end),'s','Color','k','MarkerFaceColor','k','MarkerSize',6);
 axis(trayectoria,'equal'); axis(trayectoria,'tight');
 xlim(trayectoria,xlim(trayectoria)+[-1 1]); ylim(trayectoria,ylim(trayectoria)+[-1 1]);
 xlabel(trayectoria,'x [m]'); ylabel(trayectoria,'y [m]');
-title(trayectoria,'a) Trayectoria','FontWeight','normal','FontSize',11);
+title(trayectoria,'Trayectoria y ocupación de carril','FontWeight','bold','FontSize',11);
 legend(trayectoria,[recorrido contrario inicio final], ...
     {'Recorrido','Carril contrario','Inicio','Final'},'Location','southoutside', ...
     'Orientation','horizontal','NumColumns',2,'Box','off','FontSize',9);
 
 velocidad = nexttile(disposicion,2);
-plot(velocidad,t,v,'Color',azul,'LineWidth',1.2);
+area(velocidad,t,v,'FaceColor',[0.92 0.95 0.98],'EdgeColor','none');
+hold(velocidad,'on');
+plot(velocidad,t,v,'Color',azul,'LineWidth',1.5);
 ylim(velocidad,[0 50]); yticks(velocidad,0:10:50); xlim(velocidad,[0 max(T,1)]);
 xlabel(velocidad,'Tiempo [s]'); ylabel(velocidad,'Velocidad [km/h]');
-title(velocidad,{'b) Velocidad solicitada',sprintf('Mínima: %.1f   Media: %.1f   Máxima: %.1f km/h', ...
-    estadisticas.velMin_kmh,estadisticas.velMedia_kmh,estadisticas.velMax_kmh)}, ...
-    'FontSize',10,'FontWeight','normal');
+title(velocidad,'Velocidad solicitada','FontSize',11,'FontWeight','bold');
+subtitle(velocidad,sprintf('Mínima: %.1f   Media: %.1f   Máxima: %.1f km/h', ...
+    estadisticas.velMin_kmh,estadisticas.velMedia_kmh,estadisticas.velMax_kmh), ...
+    'FontSize',9,'Color',gris);
 
 direccion = nexttile(disposicion,4);
-plot(direccion,t,volante,'Color',azul,'LineWidth',1.2); hold(direccion,'on');
+plot(direccion,t,volante,'Color',azul,'LineWidth',1.5); hold(direccion,'on');
 yline(direccion,0,':','Color',gris);
 ylim(direccion,[-45 45]); yticks(direccion,-45:15:45); xlim(direccion,[0 max(T,1)]);
 xlabel(direccion,'Tiempo [s]'); ylabel(direccion,'Volante [grados]');
-title(direccion,{'c) Mando de dirección',sprintf('Mínimo: %.1f   Media: %.1f   Máximo: %.1f grados', ...
-    estadisticas.volanteMin_deg,estadisticas.volanteMedia_deg,estadisticas.volanteMax_deg)}, ...
-    'FontSize',10,'FontWeight','normal');
+title(direccion,'Mando de dirección','FontSize',11,'FontWeight','bold');
+subtitle(direccion,sprintf('Mínimo: %.1f   Media: %.1f   Máximo: %.1f grados', ...
+    estadisticas.volanteMin_deg,estadisticas.volanteMedia_deg,estadisticas.volanteMax_deg), ...
+    'FontSize',9,'Color',gris);
 
 for ax = [trayectoria velocidad direccion]
-    set(ax,'FontName','Arial','FontSize',10,'XColor','k','YColor','k', ...
-        'Color','w','GridColor',gris,'GridAlpha',0.15,'Box','on','TickDir','out');
+    set(ax,'FontName','Arial','FontSize',10,'XColor',texto,'YColor',texto, ...
+        'Color','w','GridColor',gris,'GridAlpha',0.15,'Box','off','TickDir','out');
     grid(ax,'on');
 end
-xlabel(disposicion,'Velocidad y dirección: consignas del controlador.', ...
-    'FontName','Arial','FontSize',9,'Color',gris);
+annotation(fig,'textbox',[0.045 0.018 0.91 0.025], ...
+    'String','Velocidad y dirección corresponden a las consignas del controlador.', ...
+    'FontName','Arial','FontSize',9,'Color',gris,'EdgeColor','none','Margin',0);
 end

@@ -54,11 +54,12 @@ class SensorFrame:
 
 
 class StartSignal:
-    """Atomic, one-shot hand-off from the first ROS command to MVSim."""
+    """Atomic motion state: 0 waiting, 1 driving, 2 stopped after starting."""
 
     def __init__(self, path):
         self.path = Path(path)
         self.started = False
+        self.state = 0
         self._write('0\n')
 
     def _write(self, value):
@@ -67,9 +68,13 @@ class StartSignal:
         temporary.replace(self.path)
 
     def start(self):
-        if not self.started:
-            self._write('1\n')
-            self.started = True
+        self.started = True
+
+    def update(self, moving):
+        state = (1 if moving else 2) if self.started else 0
+        if state != self.state:
+            self._write(f'{state}\n')
+            self.state = state
 
 
 def sensor_frames(config: dict) -> tuple[str, tuple[SensorFrame, ...]]:
@@ -220,6 +225,7 @@ def make_bridge_class():
             self.static_tf_pub.sendTransform(transforms)
 
         def publish_command(self, command):
+            self.start_signal.update(command[0] != 0.0)
             msg = Twist()
             msg.linear.x, msg.angular.z = command
             self.cmd_pub.publish(msg)
