@@ -6,8 +6,22 @@ hide:
 
 ## Conexión
 
-1. Editar `ROS_DOMAIN_ID` en `docker/.env` con el dominio elegido.
-2. Usar el mismo dominio en el control y reiniciar el simulador para aplicar el cambio.
+1. Desde la carpeta `sci_practica_final`, abrir `docker/.env` y editar **`ROS_DOMAIN_ID`** con el dominio elegido.
+2. Usar el mismo dominio en el control. Si el simulador ya estaba en ejecución, detenerlo con **Ctrl+C** y volver a ejecutar `make run` para aplicar el cambio.
+3. Con la simulación en marcha, abrir otra terminal en la carpeta del proyecto y entrar en el contenedor:
+
+    ```bash
+    make attach
+    ```
+
+4. Comprobar el dominio y los topics disponibles desde esa terminal:
+
+    ```bash
+    echo "$ROS_DOMAIN_ID"
+    ros2 topic list
+    ```
+
+5. Escribir `exit` para salir del contenedor. La simulación continúa en la terminal de `make run`.
 
 ## Control
 
@@ -18,7 +32,8 @@ hide:
     | `linear.x` | Velocidad longitudinal; positiva hacia delante. | m/s |
     | `angular.z` | Velocidad angular; positiva hacia la izquierda. | rad/s |
 
-2. Límites: **100 km/h (27,78 m/s)** de velocidad y **−45° a +45°** de dirección.
+2. Límites: **100 km/h (27,78 m/s)** de velocidad y **−45° a +45°** de dirección del vehículo.
+3. El coche y las cajas permanecen parados hasta recibir el primer mensaje en `/r0/cmd_vel`.
 
 ## Colisiones
 
@@ -30,9 +45,11 @@ hide:
 
     | Topic | Tipo | Información |
     |---|---|---|
-    | `/r0/scan` | `sensor_msgs/msg/LaserScan` | Hokuyo: 270°, 1081 rayos, 40 Hz y alcance máximo de 30 m. |
-    | `/r0/sonar0` … `/r0/sonar7` | `sensor_msgs/msg/Range` | Media de cada sector del LiDAR, a 40 Hz. |
-    | `/r0/odom` | `nav_msgs/msg/Odometry` | Posición, orientación y velocidad del coche. |
+    | `/r0/scan` | `sensor_msgs/msg/LaserScan` | Hokuyo: 270°, 1081 rayos, 20 Hz y alcance máximo de 30 m. |
+    | `/r0/sonar0` … `/r0/sonar7` | `sensor_msgs/msg/Range` | Media de cada sector del LiDAR, a 20 Hz. |
+    | `/r0/odom` | `nav_msgs/msg/Odometry` | Posición, orientación y velocidad del coche, a 20 Hz. |
+
+2. Para cambiar la frecuencia común de la física, los sensores y las publicaciones ROS2, editar `simulation.rate_hz` en `docker/config/scenario.yaml`. Reiniciar la simulación con **Ctrl+C** y `make run` para aplicar el cambio.
 
 ## Sonares
 

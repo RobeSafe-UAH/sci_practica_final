@@ -26,6 +26,7 @@ def launch_setup(context):
     config_file = LaunchConfiguration('config_file').perform(context)
     config = load_config(config_file)
     robot = config['robot']['name']
+    rate_hz = float(config['simulation']['rate_hz'])
     headless = LaunchConfiguration('headless').perform(context).lower()
     if headless not in ('true', 'false'):
         raise ValueError('headless must be true or false')
@@ -50,6 +51,12 @@ def launch_setup(context):
         package='mvsim', executable='mvsim_node', name='sci_simulator',
         parameters=[{
             'world_file': str(world_file),
+            # MVSim skips ticks shorter than the physics step. Polling more
+            # often avoids losing alternate steps to timer jitter.
+            'simul_rate': 10.0 * rate_hz,
+            # Publish state only when physics advances.
+            'period_ms_publish_tf': 0.0,
+            'gui_refresh_period': 1000.0 / rate_hz,
             'headless': headless == 'true',
             'force_publish_vehicle_namespace': True,
             'do_fake_localization': False,

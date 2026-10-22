@@ -7,3 +7,10 @@ __pycache__/
 !/docker/.env
 site/
 /docs/.venv/
+
+# MATLAB: modelo y scripts; soluciones y archivos generados permanecen locales.
+*.fis
+/matlab/*
+!/matlab/ackerman_ROS2_controller.slx
+!/matlab/controller_ros2.m
+!/matlab/evaluate_controller.m

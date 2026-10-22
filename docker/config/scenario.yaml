@@ -1,4 +1,6 @@
 # Metres, seconds, radians unless a key explicitly ends in _deg.
+simulation:
+  rate_hz: 20.0  # Physics, sensors and ROS publications.
 track:
   # Four straights joined by circular curves, two lanes in opposite directions.
   name: circuito_sci
@@ -30,7 +32,6 @@ lidar:
   z: 0.15
   fov_degrees: 270.0
   nrays: 1081
-  period: 0.025
   max_range: 30.0
 sonar:
   # Equal-width sectors covering the Hokuyo scan, from right to left.

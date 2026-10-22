@@ -2,6 +2,7 @@
 % CONTROLLER_ROS2.M - CONTROL Y EVALUACION DESDE SIMULINK (ROS 2)
 %==========================================================================clearvars; clc; close all;
 clear, clc;
+Ts=0.05;
 %% 1. CONFIGURACION DE ROS 2
 % Debe coincidir con ROS_DOMAIN_ID del simulador y del modelo Simulink.
 dominioROS2 = 42;

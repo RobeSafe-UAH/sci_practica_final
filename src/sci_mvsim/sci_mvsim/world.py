@@ -74,9 +74,10 @@ def validate_config(config):
     if not isinstance(config, dict):
         raise ValueError('scenario must be a YAML mapping')
     config = deepcopy(config)
-    for name in ('track', 'robot', 'traffic', 'lidar', 'sonar'):
+    for name in ('simulation', 'track', 'robot', 'traffic', 'lidar', 'sonar'):
         if not isinstance(config.get(name), dict):
             raise ValueError(f'{name} must be a mapping')
+    _number(config['simulation'], 'rate_hz', positive=True)
     track, robot, traffic = (config[key] for key in ('track', 'robot', 'traffic'))
     track.setdefault('name', 'circuito_sci')
     if not isinstance(track['name'], str) or not re.fullmatch(r'[a-z][a-z0-9_]*', track['name']):
@@ -147,7 +148,8 @@ def validate_config(config):
     if lidar['fov_degrees'] > 270.0:
         raise ValueError('the Hokuyo field of view must be <= 270 degrees')
     _integer(lidar, 'nrays', 8)
-    _number(lidar, 'period', positive=True)
+    if 'period' in lidar:
+        raise ValueError('set the common frequency in simulation.rate_hz, not lidar.period')
     _number(lidar, 'max_range', positive=True)
     for key in ('x', 'y', 'z'):
         _number(lidar, key)
@@ -316,10 +318,11 @@ def _vehicle_include_attributes(config):
     # Bind steering and the nested Hokuyo include parameters to the scenario.
     lidar = config['lidar']
     bindings = {'sensor_x': 'x', 'sensor_y': 'y', 'sensor_z': 'z',
-                'fov_degrees': 'fov_degrees', 'sensor_period_sec': 'period',
+                'fov_degrees': 'fov_degrees',
                 'sensor_nrays': 'nrays', 'max_range': 'max_range'}
     return {'class_name': 'sci_ego', 'chassis_color': '#3080ff',
             'max_steer_deg': str(config['robot']['max_steer_deg']),
+            'sensor_period_sec': str(1.0 / config['simulation']['rate_hz']),
             **{parameter: str(lidar[key]) for parameter, key in bindings.items()}}
 
 
@@ -366,7 +369,7 @@ def build_world(config, out_dir):
     right_lane = paths['right_lane']
     world = ET.Element('mvsim_world', version='1.0')
     world.append(ET.Comment(' SCI: one lane per direction; slow traffic follows ego lane. '))
-    _value(world, 'simul_timestep', 0.005)
+    _value(world, 'simul_timestep', 1.0 / config['simulation']['rate_hz'])
     _value(world, 'collision_threshold', 0.0)
     gui = ET.SubElement(world, 'gui')
     _value(gui, 'ortho', 'false')
@@ -375,7 +378,7 @@ def build_world(config, out_dir):
     _value(gui, 'cam_elevation', 50)
     _value(gui, 'cam_azimuth', -135)
     _value(gui, 'fov_deg', 60)
-    _value(gui, 'refresh_fps', 30)
+    _value(gui, 'refresh_fps', config['simulation']['rate_hz'])
     _value(gui, 'show_forces', 'false')
     _value(gui, 'show_sensor_points', 'false')
     add_scene(world, config, copied_track, paths, output)

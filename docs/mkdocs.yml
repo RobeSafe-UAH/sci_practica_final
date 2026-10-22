@@ -25,6 +25,7 @@ nav:
 extra_css:
   - assets/styles.css
 markdown_extensions:
+  - admonition
   - tables
   - md_in_html
   - sane_lists

@@ -28,45 +28,79 @@ hide:
 
 === "Windows"
 
-    1. En **Windows 11 22H2 o posterior**, abrir PowerShell como administrador:
+    1. En **Windows 11 22H2 o posterior**, abrir **PowerShell como administrador** y ejecutar:
 
         ```powershell
         wsl --install -d Ubuntu
         wsl --update
         ```
 
-    2. Reiniciar y abrir Ubuntu para completar su configuración.
-    3. Crear o editar `%UserProfile%\.wslconfig` en Windows para activar la [red reflejada de WSL2](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking):
+    2. **Reiniciar** el equipo. Abrir Ubuntu desde PowerShell y configurar el usuario y la contraseña que se soliciten:
 
-        ```ini
-        [wsl2]
-        networkingMode=mirrored
+        ```powershell
+        wsl -d Ubuntu
         ```
 
-    4. Aplicar los cambios desde PowerShell y volver a abrir Ubuntu:
+        Salir de Ubuntu:
+
+        ```bash
+        exit
+        ```
+
+    3. Activar la [red reflejada de WSL2](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) desde PowerShell:
+
+        ```powershell
+        @'
+        [wsl2]
+        networkingMode=mirrored
+        '@ | Set-Content "$env:USERPROFILE\.wslconfig" -Encoding ascii
+        ```
+
+        !!! warning ""
+            Este comando sobrescribe `.wslconfig` si ya existe.
+
+    4. Aplicar los cambios:
 
         ```powershell
         wsl --shutdown
         ```
 
-    5. En Ubuntu de WSL2, instalar Git y Make:
+    5. Instalar **Git y Make** en Ubuntu desde PowerShell:
 
-        ```bash
-        sudo apt update
-        sudo apt install -y git make
+        ```powershell
+        wsl -d Ubuntu -- sudo apt update
+        wsl -d Ubuntu -- sudo apt install -y git make
         ```
 
-    6. Instalar **Docker Engine y el complemento Compose dentro de Ubuntu**, siguiendo la [guía oficial](https://docs.docker.com/engine/install/ubuntu/).
-    7. Habilitar Docker para el usuario:
+    6. Entrar en Ubuntu e instalar **Docker Engine y Docker Compose** siguiendo la [guía oficial](https://docs.docker.com/engine/install/ubuntu/):
 
-        ```bash
-        sudo systemctl enable --now docker
-        sudo usermod -aG docker "$USER"
+        ```powershell
+        wsl -d Ubuntu
         ```
 
-    8. Salir de Ubuntu y volver a entrar. Ejecutar los comandos del proyecto desde esa terminal.
+        Al terminar, salir de Ubuntu:
 
-    9. Permitir la comunicación ROS en el [firewall de Windows y WSL](https://learn.microsoft.com/en-us/windows/wsl/networking#wsl-and-firewall) si el sistema solicita autorización para la red utilizada.
+        ```bash
+        exit
+        ```
+
+    7. Habilitar Docker y el acceso para el usuario desde PowerShell:
+
+        ```powershell
+        wsl -d Ubuntu -- sudo systemctl enable --now docker
+        wsl -d Ubuntu -- bash -lc 'sudo usermod -aG docker "$USER"'
+        wsl --shutdown
+        ```
+
+    8. Comprobar Docker y abrir Ubuntu para trabajar:
+
+        ```powershell
+        wsl -d Ubuntu -- docker compose version
+        wsl -d Ubuntu -- docker run --rm hello-world
+        wsl -d Ubuntu
+        ```
+
+    9. Permitir el tráfico de ROS en el [firewall de Windows y WSL](https://learn.microsoft.com/en-us/windows/wsl/networking#wsl-and-firewall) si es necesario para la red utilizada.
 
 === "macOS Intel"
 

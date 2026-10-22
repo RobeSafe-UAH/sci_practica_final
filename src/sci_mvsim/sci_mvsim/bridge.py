@@ -166,6 +166,7 @@ def make_bridge_class():
             self.odom_frame = f'{self.robot}/odom'
             self.raw_prefix = f'/_sim/{self.robot}'
             self.sonar_count = config['sonar']['count']
+            period = 1.0 / config['simulation']['rate_hz']
             self.lidar_fov = math.radians(config['lidar']['fov_degrees'])
             robot = config['robot']
             self.watchdog = CommandWatchdog(
@@ -195,7 +196,7 @@ def make_bridge_class():
             # A paused /clock must not suspend the command timeout.
             self.steady_clock = Clock(clock_type=ClockType.STEADY_TIME)
             self.command_timer = self.create_timer(
-                0.05, self.command_tick, clock=self.steady_clock)
+                period, self.command_tick, clock=self.steady_clock)
             self.get_logger().info(
                 f'Simulation interface /{self.robot}; Twist command timeout: 1.0 s')
 
@@ -240,7 +241,6 @@ def make_bridge_class():
 
         def collision(self, msg):
             self.collided = self.collided or msg.data
-            self.publish_collision()
 
         def publish_collision(self):
             message = Bool()
