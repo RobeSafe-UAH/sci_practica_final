@@ -19,7 +19,7 @@ robot:
   max_speed: 13.88888888888889  # 50 km/h, expressed in m/s; forward only.
   max_steer_deg: 45.0
 traffic:
-  count: 6  # Integer from 0 to 6; initial positions are calculated automatically.
+  count: 1  # Integer from 0 to 6; initial positions are calculated automatically.
   speed: 1
   start_distance: 5.0
   spacing: 12.0
