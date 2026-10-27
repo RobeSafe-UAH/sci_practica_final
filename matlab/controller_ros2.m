@@ -1,43 +1,54 @@
+%==========================================================================
+% CONTROLLER_ROS2.M - CONTROL Y EVALUACION DESDE SIMULINK (ROS 2)
+%==========================================================================
 clearvars; clc; close all;
-cd(fileparts(mfilename('fullpath')));
+
+%% 1. CONFIGURACION DE ROS 2
+% Debe coincidir con ROS_DOMAIN_ID del simulador y del modelo Simulink.
 dominioROS2 = 42;
-tiempoEspera = 10;
+setenv('ROS_DOMAIN_ID', num2str(dominioROS2));
+
+topicOdom = '/r0/odom';
 modelo = 'ackerman_ROS2_controller.slx';
-setenv('ROS_DOMAIN_ID',num2str(dominioROS2));
+tiempoEspera = 3;
 
-if ~isfile('fuzzy_controller.fis')
-    error('Falta fuzzy_controller.fis en la carpeta matlab.');
-end
-fis = readfis('fuzzy_controller.fis');
-if numel(fis.Inputs) ~= 8 || numel(fis.Outputs) ~= 2
-    error('El FIS debe tener ocho entradas (sonar_0 a sonar_7) y dos salidas (V, W).');
-end
+%% 2. ESPERAR A QUE EL SIMULADOR PUBLIQUE ODOMETRIA
+nodo = ros2node('/matlab_controller_comprobacion');
+odom = ros2subscriber(nodo, topicOdom, 'nav_msgs/Odometry', ...
+                      'Reliability', 'besteffort');
 
-nodo = ros2node('/matlab_controller_comprobacion',dominioROS2);
-odom = ros2subscriber(nodo,'/r0/odom','nav_msgs/Odometry', ...
-    'Reliability','besteffort');
-fprintf('Esperando odometría ROS 2 (dominio %d)...\n',dominioROS2);
-[~,recibido,estado] = receive(odom,tiempoEspera);
+fprintf('Esperando odometria ROS 2 en %s (dominio %d)...\n', ...
+        topicOdom, dominioROS2);
+[~, recibido, estado] = receive(odom, tiempoEspera);
+
+clear odom nodo;
+
 if ~recibido
-    error('No se ha recibido odometría (%s). Comprueba el simulador y ROS_DOMAIN_ID.',estado);
+    error(['No se ha recibido odometria (%s). Comprueba el nombre del ' ...
+           'topico, su tipo, el dominio ROS 2 y la configuracion QoS.'], ...
+           estado);
 end
-clear odom;
 
-mando = ros2publisher(nodo,'/r0/cmd_vel','geometry_msgs/Twist');
-parada = ros2message(mando);
-fprintf('Iniciando %s...\n',modelo);
-% Enviar cero al terminar, fallar o interrumpir la simulación.
-feval(@(paradaFinal) sim(modelo), onCleanup(@() send(mando,parada)));
-clear mando nodo;
+%% 3. EJECUTAR EL CONTROLADOR DE SIMULINK
+fprintf('Odometria recibida. Iniciando %s...\n', modelo);
+sim(modelo);
 
+%% 4. EVALUAR EL RESULTADO
+% El subsistema de evaluacion del .slx debe escribir data.mat.
 if isfile('data.mat')
-    archivo = load('data.mat','data');
-    if isfield(archivo,'data') && isnumeric(archivo.data) && size(archivo.data,1) >= 8
+    archivo = load('data.mat', 'data');
+    if isfield(archivo, 'data') && isnumeric(archivo.data) && ...
+            size(archivo.data, 1) >= 8
         evaluate_controller;
     else
-        warning('data.mat debe contener una matriz numérica data de al menos ocho filas.');
+        warning(['Se encontro data.mat, pero su variable data no tiene ' ...
+                 'las 8 filas que espera evaluate_controller.m. ' ...
+                 'Revisa el Mux/To File del modelo Simulink.']);
     end
 else
-    warning('No se ha generado data.mat. Revisa el bloque To File del modelo.');
+    warning(['No se encontro data.mat. Revisa el bloque To File ' ...
+             'del subsistema de evaluacion en Simulink.']);
 end
-fprintf('Simulación finalizada.\n');
+
+%% 5. FIN
+fprintf('Simulacion finalizada.\n');
