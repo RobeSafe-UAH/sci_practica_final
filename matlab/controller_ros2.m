@@ -1,5 +1,4 @@
-function controller_ros2
-clc;
+clearvars; clc; close all;
 cd(fileparts(mfilename('fullpath')));
 dominioROS2 = 42;
 tiempoEspera = 10;
@@ -26,15 +25,15 @@ clear odom;
 
 mando = ros2publisher(nodo,'/r0/cmd_vel','geometry_msgs/Twist');
 parada = ros2message(mando);
-paradaFinal = onCleanup(@() send(mando,parada));
 fprintf('Iniciando %s...\n',modelo);
-sim(modelo);
-clear paradaFinal mando nodo;
+% Enviar cero al terminar, fallar o interrumpir la simulación.
+feval(@(paradaFinal) sim(modelo), onCleanup(@() send(mando,parada)));
+clear mando nodo;
 
 if isfile('data.mat')
     archivo = load('data.mat','data');
     if isfield(archivo,'data') && isnumeric(archivo.data) && size(archivo.data,1) >= 8
-        evaluate_controller(true);
+        evaluate_controller;
     else
         warning('data.mat debe contener una matriz numérica data de al menos ocho filas.');
     end
@@ -42,4 +41,3 @@ else
     warning('No se ha generado data.mat. Revisa el bloque To File del modelo.');
 end
 fprintf('Simulación finalizada.\n');
-end

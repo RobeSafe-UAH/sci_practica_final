@@ -1,5 +1,4 @@
-function estadisticas = evaluate_controller(graficar)
-if nargin < 1, graficar = true; end
+cd(fileparts(mfilename('fullpath')));
 r = load('data.mat', 'data');
 data = r.data;
 data = data(:, all(isfinite(data([1 2 3 7 8],:)), 1));
@@ -47,7 +46,6 @@ estadisticas = struct('tiempoTotal_s', T, 'vuelta_pct', vuelta, ...
     'volanteMin_deg', min(volante), 'volanteMedia_deg', sum(pesos.*volante), ...
     'volanteMax_deg', max(volante));
 disp(estadisticas);
-if ~graficar, return; end
 
 azul = [0.13 0.35 0.58]; rojo = [0.70 0.20 0.19];
 texto = [0.12 0.18 0.25]; gris = [0.43 0.47 0.51];
@@ -133,4 +131,3 @@ end
 annotation(fig,'textbox',[0.045 0.018 0.91 0.025], ...
     'String','Velocidad y dirección corresponden a las consignas del controlador.', ...
     'FontName','Arial','FontSize',9,'Color',gris,'EdgeColor','none','Margin',0);
-end
