@@ -4,6 +4,8 @@ hide:
 ---
 # Repositorio
 
+Esta página se conserva como referencia de mantenimiento y queda excluida de la documentación publicada para los alumnos.
+
 ## Archivos principales
 
 1. **`docker/`**: imagen, contenedor y configuración del simulador.
@@ -39,19 +41,7 @@ hide:
 5. **`Makefile`**: comandos `build`, `run` y `attach`.
 6. **`README.md`**: acceso a la guía publicada. **`LICENSE`**: licencia del proyecto.
 
-## Trabajar en MATLAB
-
-1. Utilizar **MATLAB R2025a o posterior**, con **Simulink**, **ROS Toolbox** y **Fuzzy Logic Toolbox** instalados. Abrir MATLAB y seleccionar **`matlab/` dentro del repositorio** como carpeta actual.
-2. Crear el controlador propio y guardarlo como **`fuzzy_controller.fis`** en esa carpeta. El modelo utiliza ocho entradas, de `sonar_0` a `sonar_7`, en metros, y dos salidas: `V`, de **0 a 50 km/h**, y `W`, como mando de dirección de **−45° a +45°**.
-3. Editar el dominio en **`controller_ros2.m`** para que coincida con `ROS_DOMAIN_ID` en `docker/.env`. En el modelo Simulink, abrir **ROS 2 → Configure ROS Network** y seleccionar el mismo **Domain ID**.
-4. Con el simulador en ejecución, lanzar desde la ventana de comandos de MATLAB:
-
-    ```matlab
-    controller_ros2
-    ```
-
-5. El modelo se detiene al cruzar la línea de meta tras una vuelta o detectar una colisión. El registro se guarda en `data.mat` y se abre la figura de evaluación.
-6. El repositorio versiona únicamente el modelo `.slx` y los dos scripts `.m`. El FIS y los archivos generados por MATLAB permanecen locales.
+La preparación del controlador, la conexión ROS2 y la evaluación se explican en la [guía MATLAB](matlab.md).
 
 ## Parámetros del simulador
 

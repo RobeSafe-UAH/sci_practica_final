@@ -137,7 +137,16 @@ hide:
     cd sci_practica_final
     ```
 
-2. Editar **`ROS_DOMAIN_ID`** en **`docker/.env`** con el dominio elegido. Usar el mismo valor en el control.
+2. Abrir **`sci_practica_final/docker/.env`** y guardar el dominio elegido:
+
+    ```dotenv
+    ROS_DOMAIN_ID=42
+    ```
+
+    `make run` lee este archivo. Usar el mismo valor en MATLAB y en la
+    configuración ROS 2 del modelo Simulink, como indica [MATLAB](matlab.md).
+    Si se modifica con la simulación en marcha, detenerla con **Ctrl+C** y
+    volver a ejecutar `make run` para crear el contenedor con el nuevo dominio.
 3. Construir la imagen:
 
     ```bash

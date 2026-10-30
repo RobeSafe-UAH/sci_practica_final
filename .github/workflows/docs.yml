@@ -6,10 +6,18 @@ on:
     paths:
       - docs/**
       - .github/workflows/docs.yml
+      - Makefile
+      - docker/.env
+      - docker/compose.yaml
+      - tests/**
   pull_request:
     paths:
       - docs/**
       - .github/workflows/docs.yml
+      - Makefile
+      - docker/.env
+      - docker/compose.yaml
+      - tests/**
   workflow_dispatch:
 
 permissions:
@@ -31,8 +39,17 @@ jobs:
           cache-dependency-path: docs/requirements.txt
       - name: Instalar herramientas
         run: python -m pip install -r docs/requirements.txt
+      - name: Comprobar dominio ROS2
+        run: |
+          docker compose version
+          python -m unittest discover -s tests -v
       - name: Construir sitio
         run: python -m mkdocs build --strict --config-file docs/mkdocs.yml
+      - name: Comprobar páginas para alumnos
+        run: |
+          test -f docs/site/matlab/index.html
+          test ! -e docs/site/repositorio
+          test ! -e docs/site/repositorio.md
       - name: Preparar GitHub Pages
         if: github.event_name != 'pull_request'
         uses: actions/configure-pages@v6

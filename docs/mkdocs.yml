@@ -6,6 +6,8 @@ repo_name: RobeSafe-UAH/sci_practica_final
 edit_uri: edit/main/docs/pages/
 docs_dir: pages
 site_dir: site
+exclude_docs: |
+  /repositorio.md
 theme:
   name: material
   language: es
@@ -21,7 +23,7 @@ nav:
   - Instalación: index.md
   - Ejecución: ejecucion.md
   - ROS2: topics.md
-  - Repositorio: repositorio.md
+  - MATLAB: matlab.md
 extra_css:
   - assets/styles.css
 markdown_extensions:
@@ -39,3 +41,4 @@ validation:
   links:
     absolute_links: warn
     unrecognized_links: warn
+    anchors: warn

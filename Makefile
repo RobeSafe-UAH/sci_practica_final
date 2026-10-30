@@ -1,3 +1,9 @@
+# Use docker/.env even when a ROS setup script exported a different domain.
+# A deliberate override remains available as: make ROS_DOMAIN_ID=17 run
+ifneq ($(origin ROS_DOMAIN_ID),command line)
+unexport ROS_DOMAIN_ID
+endif
+
 COMPOSE ?= docker compose --env-file docker/.env -f docker/compose.yaml
 DOCS_PYTHON ?= docs/.venv/bin/python
 DOCS_OUTPUT ?= docs/site
