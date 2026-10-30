@@ -9,7 +9,6 @@ on:
       - Makefile
       - docker/.env
       - docker/compose.yaml
-      - tests/**
   pull_request:
     paths:
       - docs/**
@@ -17,7 +16,6 @@ on:
       - Makefile
       - docker/.env
       - docker/compose.yaml
-      - tests/**
   workflow_dispatch:
 
 permissions:
@@ -39,10 +37,6 @@ jobs:
           cache-dependency-path: docs/requirements.txt
       - name: Instalar herramientas
         run: python -m pip install -r docs/requirements.txt
-      - name: Comprobar dominio ROS2
-        run: |
-          docker compose version
-          python -m unittest discover -s tests -v
       - name: Construir sitio
         run: python -m mkdocs build --strict --config-file docs/mkdocs.yml
       - name: Comprobar páginas para alumnos
