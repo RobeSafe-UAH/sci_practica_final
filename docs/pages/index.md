@@ -95,7 +95,9 @@ hide:
         Signed-By: /etc/apt/keyrings/docker.asc
         EOF
         
-        sudo apt update```
+        sudo apt update
+        sudo apt upgrade
+        ```
 
         ```powershell
         sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
