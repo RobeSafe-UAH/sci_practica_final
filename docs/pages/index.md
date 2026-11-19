@@ -28,7 +28,7 @@ hide:
 
 === "Windows"
 
-    1. En **Windows 11 22H2 o posterior**, abrir **PowerShell como administrador** y ejecutar:
+    1. En **Windows 11 22H2 o posterior**, abrir **Windows PowerShell como administrador** y ejecutar:
 
         ```powershell
         wsl --install -d Ubuntu
@@ -72,11 +72,33 @@ hide:
         wsl -d Ubuntu -- sudo apt install -y git make
         ```
 
-    6. Entrar en Ubuntu e instalar **Docker Engine y Docker Compose** siguiendo la [guía oficial](https://docs.docker.com/engine/install/ubuntu/):
+    6. Entrar en Ubuntu e instalar **Docker Engine y Docker Compose**:
 
         ```powershell
         wsl -d Ubuntu
         ```
+
+        ```sudo apt update
+        sudo apt install ca-certificates curl
+        sudo install -m 0755 -d /etc/apt/keyrings
+        sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+        
+        # Add the repository to Apt sources:
+        sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+        Types: deb
+        URIs: https://download.docker.com/linux/ubuntu
+        Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+        Components: stable
+        Architectures: $(dpkg --print-architecture)
+        Signed-By: /etc/apt/keyrings/docker.asc
+        EOF
+        
+        sudo apt update```
+
+        ```sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ```
+
 
         Al terminar, salir de Ubuntu:
 
