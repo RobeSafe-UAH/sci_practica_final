@@ -79,6 +79,7 @@ hide:
         ```
 
         ```powershell
+        # Add Docker's official GPG key:
         sudo apt update
         sudo apt install ca-certificates curl
         sudo install -m 0755 -d /etc/apt/keyrings
@@ -96,7 +97,6 @@ hide:
         EOF
         
         sudo apt update
-        sudo apt upgrade
         ```
 
         ```powershell
