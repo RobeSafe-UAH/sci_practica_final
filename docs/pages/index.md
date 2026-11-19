@@ -78,7 +78,8 @@ hide:
         wsl -d Ubuntu
         ```
 
-        ```sudo apt update
+        ```powershell
+        sudo apt update
         sudo apt install ca-certificates curl
         sudo install -m 0755 -d /etc/apt/keyrings
         sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -96,7 +97,8 @@ hide:
         
         sudo apt update```
 
-        ```sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ```powershell
+        sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         ```
 
 
