@@ -20,6 +20,57 @@ MAX_FORWARD_SPEED_MPS = 50.0 / 3.6
 MAX_STEERING_RAD = math.pi / 4.0
 
 
+def downsample_scan(scan, count: int):
+    """Copy a uniform scan, retaining the nearest valid return per output angle.
+
+    Output angles include both original endpoints. Each input ray belongs to
+    its nearest output angle, with midpoint ties assigned to the higher angle.
+    Endpoint regions have half the width of the interior regions. Taking each
+    region's minimum preserves narrow obstacles without interpolating ranges.
+    Positive infinity denotes no return; invalid-only regions remain NaN.
+    The selected ray also supplies its intensity when intensities are present.
+
+    This helper accepts a LaserScan-like object without importing ROS messages.
+    """
+    length = len(scan.ranges)
+    if isinstance(count, bool) or not isinstance(count, int) or not 2 <= count <= length:
+        raise ValueError('Published scan count must be an integer between 2 and the input ray count')
+    minimum, maximum = scan.range_min, scan.range_max
+    if not (math.isfinite(minimum) and math.isfinite(maximum) and 0 <= minimum < maximum):
+        raise ValueError('LiDAR limits must satisfy 0 <= min_range < max_range')
+    span = scan.angle_max - scan.angle_min
+    if (not math.isfinite(scan.angle_min) or not math.isfinite(span) or span <= 0
+            or not math.isfinite(scan.angle_increment) or scan.angle_increment <= 0
+            or abs(scan.angle_increment * (length - 1) - span) > 0.002):
+        raise ValueError('The input scan must have consistent, uniformly spaced angles')
+    if not math.isfinite(scan.time_increment) or scan.time_increment < 0:
+        raise ValueError('The input scan time_increment must be finite and nonnegative')
+
+    output = copy.deepcopy(scan)
+    has_intensities = len(scan.intensities) == length
+    if count == length:
+        if not has_intensities:
+            output.intensities = []
+        return output
+
+    ranges = [math.nan] * count
+    selected = [None] * count
+    for index, raw in enumerate(scan.ranges):
+        sector = int(index * (count - 1) / (length - 1) + 0.5)
+        value = float(raw)
+        if math.isfinite(value) and minimum <= value <= maximum:
+            if selected[sector] is None or not math.isfinite(ranges[sector]) or value < ranges[sector]:
+                ranges[sector], selected[sector] = value, index
+        elif value == math.inf and selected[sector] is None:
+            ranges[sector], selected[sector] = math.inf, index
+    output.ranges = ranges
+    output.intensities = ([float(scan.intensities[index]) if index is not None else math.nan
+                           for index in selected] if has_intensities else [])
+    output.angle_increment = span / (count - 1)
+    output.time_increment = scan.time_increment * (length - 1) / (count - 1)
+    return output
+
+
 def sonar_means(ranges, minimum: float, maximum: float, count: int = 8) -> tuple[float, ...]:
     """Average the finite valid rays in consecutive equal-angle scan cones.
 
@@ -184,6 +235,7 @@ def make_bridge_class():
             self.sonar_count = config['sonar']['count']
             period = 1.0 / config['simulation']['rate_hz']
             self.lidar_fov = math.radians(config['lidar']['fov_degrees'])
+            self.published_nrays = config['lidar']['published_nrays']
             robot = config['robot']
             self.watchdog = CommandWatchdog(
                 float(robot.get('max_speed', MAX_FORWARD_SPEED_MPS)), float(robot['wheelbase']),
@@ -274,9 +326,13 @@ def make_bridge_class():
             self.collision_pub.publish(message)
 
         def scan(self, msg):
-            output = copy.deepcopy(msg)
-            output.header.frame_id = self.frames[0].frame_id
-            self.scan_pub.publish(output)
+            try:
+                output = downsample_scan(msg, self.published_nrays)
+            except ValueError as error:
+                self.get_logger().warning(f'Rejected public scan reduction: {error}')
+            else:
+                output.header.frame_id = self.frames[0].frame_id
+                self.scan_pub.publish(output)
             # Reject a malformed scan rather than attach incorrect cone frames.
             span = msg.angle_max - msg.angle_min
             if (not math.isfinite(span) or abs(span - self.lidar_fov) > 0.002
@@ -286,6 +342,7 @@ def make_bridge_class():
                 self.get_logger().warning('Rejected sonar derivation from inconsistent scan angles')
                 return
             try:
+                # Sonars always use all internal rays, before public reduction.
                 means = sonar_means(msg.ranges, msg.range_min, msg.range_max, self.sonar_count)
             except ValueError as error:
                 self.get_logger().warning(f'Rejected sonar derivation: {error}')

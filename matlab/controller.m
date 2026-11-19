@@ -1,5 +1,5 @@
 %==========================================================================
-% CONTROLLER_ROS2.M - CONTROL Y EVALUACION DESDE SIMULINK (ROS 2)
+% CONTROLLER.M - CONTROL Y EVALUACION DESDE SIMULINK (ROS 2)
 %==========================================================================
 clearvars; clc; close all;
 

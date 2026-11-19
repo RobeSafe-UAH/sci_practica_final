@@ -1,17 +1,25 @@
+# Construccion y caches.
 build/
 install/
 log/
 __pycache__/
-*.pyc
+*.py[cod]
+*.egg-info/
+.venv/
+site/
+
+# Ajustes locales y archivos del sistema.
 .env
 !/docker/.env
-site/
-/docs/.venv/
+.DS_Store
+Thumbs.db
 
 # MATLAB: modelo y scripts; soluciones y archivos generados permanecen locales.
 *.fis
 /matlab/*
 !/matlab/ackerman_ROS2_controller.slx
 !/matlab/ackerman_ROS2_controller2023.slx
-!/matlab/controller_ros2.m
+!/matlab/controller.m
+!/matlab/sensores.m
 !/matlab/evaluate_controller.m
+/matlab/soluciones/

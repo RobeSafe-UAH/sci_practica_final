@@ -17,6 +17,7 @@ help:
 	  '' \
 	  '  make build     Construir la imagen del simulador.' \
 	  '  make run       Ejecutar en esta terminal; Ctrl+C detiene y retira el contenedor.' \
+	  '  make attach    Abrir otra terminal en el contenedor en ejecucion.' \
 	  '  make help      Mostrar esta ayuda.'
 
 build:
@@ -24,7 +25,7 @@ build:
 
 attach:
 	$(COMPOSE) exec simulator bash
-	
+
 run:
 	@running_simulator="$$($(COMPOSE) ps --status running --quiet simulator)" || exit $$?; \
 	  if [ -n "$$running_simulator" ]; then \

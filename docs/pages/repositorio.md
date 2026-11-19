@@ -24,7 +24,6 @@ Esta página se conserva como referencia de mantenimiento y queda excluida de la
     |---|---|
     | `sci_mvsim/definitions/` | Modelo físico del vehículo, Hokuyo y coches de tráfico. |
     | `sci_mvsim/models/` | Mallas 3D del coche. |
-    | `sci_mvsim/tracks/` | Mapa de referencia del circuito. |
     | `sci_mvsim/launch/` | Lanzamiento ROS2. |
     | `sci_mvsim/sci_mvsim/` | Generación de la pista y publicación de sensores y colisiones. |
     | `sci_start_gate/` | Mantiene todos los coches parados hasta la primera orden. |
@@ -34,7 +33,8 @@ Esta página se conserva como referencia de mantenimiento y queda excluida de la
     | Archivo | Uso |
     |---|---|
     | `ackerman_ROS2_controller.slx` | Modelo Simulink: lectura de sensores, controlador, publicación de órdenes y parada. |
-    | `controller_ros2.m` | Configuración del dominio ROS2, ejecución del modelo y evaluación del resultado. |
+    | `controller.m` | Configuración del dominio ROS2, ejecución del modelo y evaluación del resultado. |
+    | `sensores.m` | Exploración de sensores y consignas de velocidad y dirección en tiempo real. |
     | `evaluate_controller.m` | Lectura de `data.mat` y figura con tiempo, recorrido, ocupación de carril y consignas. |
 
 4. **`docs/`**: páginas de esta guía, configuración de MkDocs y dependencias de documentación.

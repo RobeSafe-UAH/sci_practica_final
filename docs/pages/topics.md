@@ -90,9 +90,11 @@ Los sensores se publican desde el arranque, también con el coche parado:
 
 | Topic | Tipo | Información |
 |---|---|---|
-| `/r0/scan` | `sensor_msgs/msg/LaserScan` | Hokuyo: 270°, 1081 rayos, 20 Hz y alcance máximo de 30 m. |
-| `/r0/sonar0` … `/r0/sonar7` | `sensor_msgs/msg/Range` | Media de cada sector del LiDAR, a 20 Hz. |
+| `/r0/scan` | `sensor_msgs/msg/LaserScan` | Hokuyo: 90 distancias reducidas por mínimo por sector, 270°, 20 Hz y alcance máximo de 30 m. |
+| `/r0/sonar0` … `/r0/sonar7` | `sensor_msgs/msg/Range` | Media de cada sector de los 1081 rayos internos del LiDAR, a 20 Hz. |
 | `/r0/odom` | `nav_msgs/msg/Odometry` | Posición, orientación y velocidad del coche, a 20 Hz. |
+
+El LiDAR simula **1081 rayos** sobre 270°. Para publicar `/r0/scan`, se agrupan por cercanía a **90 ángulos uniformes entre −135° y +135°**, separados por 270°/89 (aproximadamente 3,034°). Cada grupo publica su distancia válida mínima, para conservar obstáculos estrechos; `+Inf` indica ausencia de retorno y `NaN`, ausencia de medida válida. Los sectores de los extremos tienen la mitad de anchura. Los ocho sonares se calculan con los 1081 rayos originales, antes de esta reducción.
 
 Leer una medida del sonar 0, expresada en metros:
 

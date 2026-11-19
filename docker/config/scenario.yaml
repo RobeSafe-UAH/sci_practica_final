@@ -28,7 +28,8 @@ lidar:
   y: 0.0
   z: 0.15
   fov_degrees: 270.0
-  nrays: 1081
+  nrays: 1081  # Internal scan, also used to derive the eight sonar cones.
+  published_nrays: 90  # Minimum valid range around each public scan angle.
   max_range: 30.0
 sonar:
   # Equal-width sectors covering the Hokuyo scan, from right to left.

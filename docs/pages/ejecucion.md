@@ -67,7 +67,7 @@ hide:
 4. Abrir de nuevo `make attach` y comprobar el valor con
    `echo "$ROS_DOMAIN_ID"`. Una terminal de un contenedor anterior debe cerrarse
    y abrirse otra vez tras el cambio.
-5. Configurar ese mismo dominio en [MATLAB y Simulink](matlab.md#configurar-el-dominio-ros2).
+5. Configurar ese mismo dominio en [MATLAB y Simulink](matlab.md#1-preparar-matlab-y-ros2).
 
 ## Gestionar los contenedores
 

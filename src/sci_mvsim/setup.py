@@ -12,7 +12,6 @@ setup(
         ('share/sci_mvsim', ['package.xml']),
         ('share/sci_mvsim/launch', glob('launch/*.launch.py')),
         ('share/sci_mvsim/definitions', glob('definitions/*.xml')),
-        ('share/sci_mvsim/tracks/circuito_sci', glob('tracks/circuito_sci/*')),
         ('share/sci_mvsim/models/f1tenth', glob('models/f1tenth/*')),
     ],
     install_requires=['setuptools'],

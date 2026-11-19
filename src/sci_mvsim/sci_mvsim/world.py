@@ -144,7 +144,10 @@ def validate_config(config):
     _number(lidar, 'fov_degrees', positive=True)
     if lidar['fov_degrees'] > 270.0:
         raise ValueError('the Hokuyo field of view must be <= 270 degrees')
-    _integer(lidar, 'nrays', 8)
+    nrays = _integer(lidar, 'nrays', 8)
+    lidar.setdefault('published_nrays', 90)
+    if _integer(lidar, 'published_nrays', 2) > nrays:
+        raise ValueError('published_nrays must not exceed the internal LiDAR nrays')
     if 'period' in lidar:
         raise ValueError('set the common frequency in simulation.rate_hz, not lidar.period')
     _number(lidar, 'max_range', positive=True)

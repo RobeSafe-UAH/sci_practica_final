@@ -3,21 +3,26 @@ project(sci_start_gate VERSION 0.1.0 LANGUAGES CXX)
 
 find_package(ament_cmake REQUIRED)
 find_package(mvsim REQUIRED)
-find_package(mrpt_maps REQUIRED)
-find_package(mrpt_gui REQUIRED)
-find_package(mrpt_topography REQUIRED)
-find_package(box2d REQUIRED)
-find_package(mvsim-msgs REQUIRED)
-# MVSim 1.5's exported config still requests the old hyphenated MRPT package
-# names. Import its official targets after finding the actual MRPT 3 packages;
-# preserving their compile definitions is required for the public World ABI.
-get_filename_component(MVSIM_PREFIX "${mvsim_DIR}/../../.." ABSOLUTE)
-foreach(module comms simulator)
-  find_file(MVSIM_${module}_TARGETS mvsim-${module}-targets.cmake HINTS
-    "${MVSIM_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}/cmake/mvsim-${module}"
-    "${MVSIM_PREFIX}/lib/cmake/mvsim-${module}" REQUIRED)
-  include(${MVSIM_${module}_TARGETS})
-endforeach()
+if(mvsim_VERSION VERSION_LESS 2.0)
+  find_package(mrpt_maps REQUIRED)
+  find_package(mrpt_gui REQUIRED)
+  find_package(mrpt_topography REQUIRED)
+  find_package(box2d REQUIRED)
+  find_package(mvsim-msgs REQUIRED)
+  # MVSim 1.5's exported config still requests the old hyphenated MRPT package
+  # names. Import its official targets after finding the actual MRPT 3 packages;
+  # preserving their compile definitions is required for the public World ABI.
+  get_filename_component(MVSIM_PREFIX "${mvsim_DIR}/../../.." ABSOLUTE)
+  foreach(module comms simulator)
+    find_file(MVSIM_${module}_TARGETS mvsim-${module}-targets.cmake HINTS
+      "${MVSIM_PREFIX}/lib/${CMAKE_LIBRARY_ARCHITECTURE}/cmake/mvsim-${module}"
+      "${MVSIM_PREFIX}/lib/cmake/mvsim-${module}" REQUIRED)
+    include(${MVSIM_${module}_TARGETS})
+  endforeach()
+else()
+  # MVSim 2 exports the MRPT 3 dependencies itself and uses ImGui instead of GUI.
+  find_package(mvsim-simulator REQUIRED)
+endif()
 find_path(RAPIDXML_INCLUDE_DIR rapidxml/rapidxml.hpp REQUIRED)
 
 add_library(sci_start_gate SHARED src/start_gate.cpp)
