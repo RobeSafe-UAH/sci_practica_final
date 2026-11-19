@@ -13,14 +13,14 @@ hide:
     make build
     ```
 
-3. Lanzar la simulación desde esa misma terminal:
+3. Para comenzar la práctica sin tráfico, abrir **`docker/config/scenario.yaml`** y poner **`count: 0` dentro de `traffic:`**. Lanzar la simulación desde esa misma terminal:
 
     ```bash
     make run
     ```
 
 4. Con el contenedor en ejecución, abrir [el simulador MVSim en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). Pulsar **Connect** si aparece la bienvenida. La ventana de MVSim se muestra dentro del escritorio del navegador.
-5. Mantener la terminal abierta durante la práctica. Al terminar, pulsar **Ctrl+C** en la terminal de `make run`: se detiene y elimina el contenedor. Para reiniciar la práctica desde la salida, ejecutar de nuevo `make run`.
+5. Mantener la terminal abierta durante la práctica. Al terminar, pulsar **Ctrl+C** en la terminal de `make run`: se detiene y elimina el contenedor. Para reiniciar la práctica desde la salida, ejecutar de nuevo `make run`. Continuar con la [exploración de sensores en MATLAB](matlab.md#2-explorar-sensores-y-velocidades).
 
 ## Abrir una terminal del contenedor
 
@@ -50,7 +50,7 @@ hide:
 ## Cambiar el dominio ROS2
 
 1. Editar **`docker/.env`**, dentro de `sci_practica_final`, y guardar
-   `ROS_DOMAIN_ID` con el valor elegido. La ruta completa es
+   `ROS_DOMAIN_ID` con el valor de [grupo y puesto](index.md#obtener-y-construir-el-proyecto). La ruta completa es
    **`sci_practica_final/docker/.env`**.
 2. Si la simulación está abierta, pulsar **Ctrl+C** en su terminal de
    `make run` para detener y retirar el contenedor anterior.

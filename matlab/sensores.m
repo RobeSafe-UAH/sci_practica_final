@@ -82,9 +82,12 @@ figura = figure('Name', 'SCI | Exploracion de sensores', 'NumberTitle', 'off', .
     'Position', [100 100 1180 760], 'MenuBar', 'none', 'ToolBar', 'none');
 setappdata(figura, 'activo', false);
 teclas = {'uparrow','downarrow','leftarrow','rightarrow','space','escape'};
-for i = 1:numel(teclas), setappdata(figura, teclas{i}, uint64(0)); end
-figura.WindowKeyPressFcn = @(f,e)setappdata(f,e.Key,tic);
-figura.WindowKeyReleaseFcn = @(f,e)setappdata(f,e.Key,uint64(0));
+for i = 1:numel(teclas), setappdata(figura, teclas{i}, false); end
+figura.WindowKeyPressFcn = @(f,e)setappdata(f,e.Key,true);
+figura.WindowKeyReleaseFcn = @(f,e)setappdata(f,e.Key,false);
+setappdata(figura, 'focoPerdido', false);
+setappdata(figura, 'escuchaFoco', addlistener(figura, 'FigureDeactivated', ...
+    @(f,~)setappdata(f,'focoPerdido',true)));
 uicontrol(figura, 'Style', 'text', 'String', 'Modo', 'Units', 'normalized', ...
     'Position', [.025 .945 .06 .035], 'BackgroundColor', figura.Color, 'HorizontalAlignment', 'left');
 selector = uicontrol(figura, 'Style', 'popupmenu', 'String', {'Manual','Autonomo'}, ...
@@ -155,21 +158,19 @@ try
         drawnow limitrate;
         if ~isgraphics(figura), break; end
         ahora = toc(reloj);
-        edades = inf(1,numel(teclas));
+        pulsadas = false(1,numel(teclas));
         for i = 1:numel(teclas)
-            marca = getappdata(figura,teclas{i});
-            if marca ~= 0, edades(i) = toc(marca); end
+            pulsadas(i) = getappdata(figura,teclas{i});
         end
-        pulsadas = isfinite(edades);
-        % La repeticion del teclado solo renueva la ultima flecha mantenida.
-        if min(edades(1:4)) >= 0.6
-            pulsadas(1:4) = false;
-            for i = 1:4, setappdata(figura,teclas{i},uint64(0)); end
-        end
-        pulsadas(5:6) = edades(5:6) < 0.6;
         if pulsadas(6), break; end
         if pulsadas(5), setappdata(figura,'activo',false); end
         modo = selector.Value;
+        if getappdata(figura,'focoPerdido')
+            if modo == 1, setappdata(figura,'activo',false); end
+            pulsadas(:) = false;
+            for i = 1:numel(teclas), setappdata(figura,teclas{i},false); end
+            setappdata(figura,'focoPerdido',false);
+        end
         if modo ~= modoAnterior
             setappdata(figura,'activo',false); vueltaCompletada = false;
         end
@@ -222,6 +223,10 @@ try
         v = 0; w = 0; obstaculo = false; vuelta = false;
         if colision || ~valido
             setappdata(figura,'activo',false); activo = false;
+        end
+        if ~activo
+            pulsadas(:) = false;
+            for i = 1:numel(teclas), setappdata(figura,teclas{i},false); end
         end
         if activo && valido && ~colision
             if ~iniciado

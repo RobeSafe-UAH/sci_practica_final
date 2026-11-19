@@ -1,5 +1,7 @@
 cd(fileparts(mfilename('fullpath')));
 r = load('data.mat', 'data');
+assert(isfield(r,'data') && isnumeric(r.data) && ismatrix(r.data) && ...
+    size(r.data,1)>=8, 'data.mat debe contener una matriz data con al menos ocho filas.');
 data = r.data;
 data = data(:, all(isfinite(data([1 2 3 7 8],:)), 1));
 if isempty(data), error('No hay muestras validas para evaluar.'); end
@@ -117,8 +119,8 @@ direccion = nexttile(disposicion,4);
 plot(direccion,t,volante,'Color',azul,'LineWidth',1.5); hold(direccion,'on');
 yline(direccion,0,':','Color',gris);
 ylim(direccion,[-45 45]); yticks(direccion,-45:15:45); xlim(direccion,[0 max(T,1)]);
-xlabel(direccion,'Tiempo [s]'); ylabel(direccion,'Volante [grados]');
-title(direccion,'Mando de dirección','FontSize',11,'FontWeight','bold');
+xlabel(direccion,'Tiempo [s]'); ylabel(direccion,'Dirección [grados]');
+title(direccion,'Ángulo de dirección','FontSize',11,'FontWeight','bold');
 subtitle(direccion,sprintf('Mínimo: %.1f   Media: %.1f   Máximo: %.1f grados', ...
     estadisticas.volanteMin_deg,estadisticas.volanteMedia_deg,estadisticas.volanteMax_deg), ...
     'FontSize',9,'Color',gris);

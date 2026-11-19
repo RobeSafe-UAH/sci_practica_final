@@ -111,8 +111,8 @@ hide:
         ```
 
     2. Instalar y abrir [OrbStack](https://docs.orbstack.dev/quick-start). Incluye Docker y Compose.
-    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Comprobar en **Networks** que existe la red **`bridge`**. Si se utiliza una máquina Linux de OrbStack, activar también **Settings → Machines → Expose ports to LAN**.
-    4. El contenedor utiliza el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional.
+    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Mantener la red predeterminada **`bridge`** de Docker.
+    4. Este proyecto selecciona el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional; no cambiarlo a `bridge` en `compose.yaml`.
     5. Como alternativa, instalar [Docker Desktop para Intel](https://docs.docker.com/desktop/setup/install/mac-install/), versión **4.34 o posterior**, y activar **Settings → Resources → Network → Enable host networking → Apply and restart**.
 
 === "macOS Apple Silicon"
@@ -124,23 +124,33 @@ hide:
         ```
 
     2. Instalar y abrir [OrbStack](https://docs.orbstack.dev/quick-start). Incluye Docker y Compose y ejecuta la imagen ARM64 de forma nativa.
-    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Comprobar en **Networks** que existe la red **`bridge`**. Si se utiliza una máquina Linux de OrbStack, activar también **Settings → Machines → Expose ports to LAN**.
-    4. El contenedor utiliza el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional.
+    3. En **Settings → Docker**, mantener activado **Expose ports to LAN**. Mantener la red predeterminada **`bridge`** de Docker.
+    4. Este proyecto selecciona el [modo `host` de OrbStack](https://docs.orbstack.dev/docker/host-networking), disponible sin configuración adicional; no cambiarlo a `bridge` en `compose.yaml`.
     5. Como alternativa, instalar [Docker Desktop para Apple Silicon](https://docs.docker.com/desktop/setup/install/mac-install/), versión **4.34 o posterior**, y activar **Settings → Resources → Network → Enable host networking → Apply and restart**.
 
 ## Obtener y construir el proyecto
 
-1. Iniciar Docker y descargar el proyecto:
+1. Iniciar Docker y descargar el proyecto desde la terminal del sistema. En Windows, utilizar **Ubuntu de WSL2** y una carpeta de Windows accesible desde Ubuntu (`/mnt/c/...`) para abrirla también con MATLAB:
 
     ```bash
     git clone https://github.com/RobeSafe-UAH/sci_practica_final.git
     cd sci_practica_final
     ```
 
-2. Abrir **`sci_practica_final/docker/.env`** y guardar el dominio elegido:
+2. Elegir el dominio según el grupo y el puesto de laboratorio:
+
+    | Grupo | Dominios |
+    |---|---|
+    | A1 | 1–20 |
+    | A2 | 21–40 |
+    | A3 | 41–60 |
+    | A4 | 61–80 |
+    | B1 | 81–100 |
+
+    Sumar el número de puesto al inicio del bloque menos uno. Por ejemplo, **A2, puesto 02 → 22**. Abrir **`sci_practica_final/docker/.env`** y guardar ese número:
 
     ```dotenv
-    ROS_DOMAIN_ID=42
+    ROS_DOMAIN_ID=22
     ```
 
     `make run` lee este archivo. Usar el mismo valor en MATLAB y en la

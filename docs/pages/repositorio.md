@@ -54,7 +54,8 @@ La preparación del controlador, la conexión ROS2 y la evaluación se explican 
     | `track.corner_radius` | Radio de las curvas, en metros. |
     | `track.width` | Anchura total de la carretera, dividida en dos carriles iguales. |
     | `robot.max_speed` | Límite de avance en m/s: 13,88888888888889 = 50 km/h. Se puede reducir. |
-    | `robot.max_steer_deg` | Límite de dirección en grados: 45, para un rango de −45° a +45°. Se puede reducir. |
+    | `robot.max_steer_deg` | Límite del ángulo de dirección equivalente del eje delantero: −45° a +45°. Se puede reducir. |
+    | `robot.wheelbase` | Distancia entre ejes: 0,3302 m. La conversión de dirección del modelo Simulink debe utilizar el mismo valor. |
     | `traffic.count` | Número de coches de tráfico, de 0 a 6. |
     | `traffic.speed` | Velocidad de los coches de tráfico en m/s. |
     | `traffic.start_distance`, `traffic.spacing` | Distancia inicial y separación entre coches de tráfico, en metros. |

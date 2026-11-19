@@ -289,6 +289,8 @@ def make_bridge_class():
             self.static_tf_pub.sendTransform(transforms)
 
         def publish_command(self, command):
+            if self.collided:
+                command = (0.0, 0.0)
             try:
                 self.start_signal.update(command[0] != 0.0)
             except OSError:
@@ -303,6 +305,10 @@ def make_bridge_class():
             self.cmd_pub.publish(msg)
 
         def command(self, msg):
+            if self.collided:
+                self.watchdog.clear()
+                self.publish_command((0.0, 0.0))
+                return
             try:
                 command = self.watchdog.accept(msg.linear.x, msg.angular.z, time.monotonic())
             except ValueError:
@@ -318,7 +324,11 @@ def make_bridge_class():
             self.publish_collision()
 
         def collision(self, msg):
-            self.collided = self.collided or msg.data
+            if msg.data and not self.collided:
+                self.collided = True
+                self.watchdog.clear()
+                self.publish_command((0.0, 0.0))
+                self.publish_collision()
 
         def publish_collision(self):
             message = Bool()

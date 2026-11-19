@@ -2,10 +2,12 @@
 % CONTROLLER.M - CONTROL Y EVALUACION DESDE SIMULINK (ROS 2)
 %==========================================================================
 clearvars; clc; close all;
+cd(fileparts(mfilename('fullpath')));
 
 %% 1. CONFIGURACION DE ROS 2
 % Debe coincidir con ROS_DOMAIN_ID del simulador y del modelo Simulink.
 dominioROS2 = 42;
+validateattributes(dominioROS2,{'numeric'},{'scalar','integer','>=',0,'<=',232});
 setenv('ROS_DOMAIN_ID', num2str(dominioROS2));
 
 topicOdom = '/r0/odom';
@@ -13,13 +15,17 @@ modelo = 'ackerman_ROS2_controller.slx';
 tiempoEspera = 3;
 
 %% 2. ESPERAR A QUE EL SIMULADOR PUBLIQUE ODOMETRIA
-nodo = ros2node('/matlab_controller_comprobacion');
-odom = ros2subscriber(nodo, topicOdom, 'nav_msgs/Odometry', ...
-                      'Reliability', 'besteffort');
-
-fprintf('Esperando odometria ROS 2 en %s (dominio %d)...\n', ...
-        topicOdom, dominioROS2);
-[~, recibido, estado] = receive(odom, tiempoEspera);
+try
+    nodo = ros2node('/matlab_controller_comprobacion',dominioROS2);
+    odom = ros2subscriber(nodo, topicOdom, 'nav_msgs/Odometry', ...
+                          'Reliability', 'besteffort');
+    fprintf('Esperando odometria ROS 2 en %s (dominio %d)...\n', ...
+            topicOdom, dominioROS2);
+    [~, recibido, estado] = receive(odom, tiempoEspera);
+catch errorROS2
+    clear odom nodo;
+    rethrow(errorROS2);
+end
 
 clear odom nodo;
 

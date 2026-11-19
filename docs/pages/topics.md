@@ -6,7 +6,7 @@ hide:
 
 ## Conexión
 
-1. Desde la carpeta `sci_practica_final`, abrir **`docker/.env`** y editar **`ROS_DOMAIN_ID`** con el dominio elegido. El controlador debe utilizar ese mismo dominio.
+1. Desde la carpeta `sci_practica_final`, abrir **`docker/.env`** y editar **`ROS_DOMAIN_ID`** con el dominio de [grupo y puesto](index.md#obtener-y-construir-el-proyecto). El controlador debe utilizar ese mismo dominio.
 2. Si se cambia el dominio con el simulador en marcha, detener `make run` con **Ctrl+C**, salir de las terminales del contenedor y ejecutar de nuevo `make run`. El cambio se aplica al crear el nuevo contenedor.
 3. Con la simulación en marcha, abrir otra terminal en la carpeta del proyecto y entrar en el contenedor. En Windows, utilizar otra terminal de **Ubuntu de WSL2**:
 
@@ -46,7 +46,7 @@ El coche recibe órdenes en **`/r0/cmd_vel`**, de tipo **`geometry_msgs/msg/Twis
 | `linear.x` | Velocidad de avance, entre 0 y 13,89 m/s. | m/s |
 | `angular.z` | Velocidad angular; positiva hacia la izquierda y negativa hacia la derecha. | rad/s |
 
-Los límites son **0 a 50 km/h (0 a 13,89 m/s)** de velocidad y **−45° a +45°** de dirección de las ruedas. Las velocidades negativas se convierten en cero. `angular.z` es una velocidad angular, no un ángulo de dirección: el simulador la limita según la velocidad de avance y la geometría del coche. Con velocidad de avance cero, el coche permanece inmóvil y no puede girar sobre sí mismo.
+Los límites son **0 a 50 km/h (0 a 13,89 m/s)** de velocidad y **−45° a +45°** del ángulo de dirección equivalente del eje delantero. Las velocidades negativas se convierten en cero. Para un ángulo `delta` en radianes y una velocidad `v` en m/s, publicar `angular.z = v*tan(delta)/0.3302`, con batalla **0,3302 m**. MVSim aplica la geometría Ackermann a las ruedas delanteras. Con velocidad de avance cero, el coche permanece inmóvil y no puede girar sobre sí mismo.
 
 ### Enviar una orden de prueba
 
@@ -76,7 +76,7 @@ Para programar un controlador completo, consultar la pestaña [MATLAB](matlab.md
 
 ## Colisiones
 
-**`/r0/collision`**, de tipo **`std_msgs/msg/Bool`**, pasa de `false` a `true` al detectar un choque y mantiene ese valor hasta reiniciar la simulación. Consultar su estado:
+**`/r0/collision`**, de tipo **`std_msgs/msg/Bool`**, pasa de `false` a `true` al detectar un choque y mantiene ese valor hasta reiniciar la simulación. El coche del alumno queda inmóvil y deja de aceptar órdenes de movimiento. Consultar su estado:
 
 ```bash
 ros2 topic echo /r0/collision --field data --once --qos-reliability reliable
@@ -110,7 +110,7 @@ ros2 topic echo /r0/odom --field pose.pose.position --once --qos-reliability rel
 
 `--field` selecciona la parte del mensaje que se quiere ver y `--once` termina tras recibir una medida. Quitar `--once` para observar la evolución y pulsar **Ctrl+C** para dejar de leer. Para consultar la velocidad de avance, sustituir `pose.pose.position` por `twist.twist.linear.x`. Estos comandos de lectura no envían órdenes al coche.
 
-La frecuencia predeterminada es **20 Hz**. Para cambiar la frecuencia común de la física, los sensores y las publicaciones ROS2, editar `simulation.rate_hz` en `docker/config/scenario.yaml`. Reiniciar la simulación con **Ctrl+C** y `make run` para aplicar el cambio.
+La frecuencia nominal predeterminada es **20 Hz**; la frecuencia efectiva depende de la temporización del simulador y de la carga del equipo. Para cambiar la frecuencia común de la física, los sensores y las publicaciones ROS2, editar `simulation.rate_hz` en `docker/config/scenario.yaml`. Reiniciar la simulación con **Ctrl+C** y `make run` para aplicar el cambio.
 
 ## Sonares
 
