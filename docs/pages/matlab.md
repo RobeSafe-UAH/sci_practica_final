@@ -79,8 +79,10 @@ MATLAB y Simulink se ejecutan en el equipo del alumno y se comunican por ROS2 co
     |---|---|
     | **LiDAR** | Los 90 valores de `/r0/scan`, representados alrededor del vehículo. |
     | **Sonares** | Distancias de `sonar_0` a `sonar_7`, en metros. |
-    | **Velocidad lineal** | Velocidad ordenada y medida por la odometría, en km/h. |
-    | **Velocidad angular** | Velocidad de giro ordenada y medida, en rad/s. |
+    | **Velocidad** | `V` en km/h, con las curvas **Consigna** y **Real**. |
+    | **Dirección** | `W` en grados, positiva hacia la izquierda, con las curvas **Consigna** y **Real**. |
+
+    La dirección real se estima a partir de la odometría y se muestra a partir de 0,05 m/s; en reposo no se puede estimar.
 
 4. Pausar con **Activar / Pausar** o **espacio**. En manual, cambiar a otra ventana también pausa el movimiento; volver a la figura y reactivarlo para continuar. **Esc** o cerrar la ventana finaliza la exploración y envía una orden de parada. Si se interrumpe con **Ctrl+C**, el puente detiene el vehículo como máximo un segundo después de la última publicación.
 5. Ante una colisión, reiniciar el simulador con **Ctrl+C** y **`make run`** antes de repetir. La pérdida de datos de sensores también detiene el movimiento.

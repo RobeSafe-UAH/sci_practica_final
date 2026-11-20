@@ -131,18 +131,20 @@ xlim(ejeSonar,[-.7 7.7]); ylim(ejeSonar,[0 1]); xticks(ejeSonar,0:7); grid(ejeSo
 etiquetasSonar = text(ejeSonar, 0:7, zeros(1,8), repmat({''},1,8), ...
     'HorizontalAlignment','center', 'VerticalAlignment','bottom', ...
     'FontSize',10, 'FontWeight','bold', 'Color',[.15 .15 .15]);
-title(ejeSonar,'Sonares'); xlabel(ejeSonar,'Numero del sonar'); ylabel(ejeSonar,'Distancia (m)');
+xticklabels(ejeSonar,compose('sonar_%d',0:7));
+ejeSonar.TickLabelInterpreter = 'none';
+title(ejeSonar,'Sonares'); xlabel(ejeSonar,'Entrada del borroso'); ylabel(ejeSonar,'Distancia (m)');
 ejeV = nexttile(diseno); hold(ejeV,'on'); grid(ejeV,'on');
 lineaV = plot(ejeV,nan,nan,'Color',azul,'LineWidth',1.5);
 lineaVReal = plot(ejeV,nan,nan,'Color',naranja,'LineWidth',1.2);
-title(ejeV,'Velocidad longitudinal'); xlabel(ejeV,'Tiempo (s)'); ylabel(ejeV,'v (km/h)');
-ylim(ejeV,[0 1]); legend(ejeV,{'Orden','Odometria'},'Location','northwest', ...
+title(ejeV,'Velocidad'); xlabel(ejeV,'Tiempo (s)'); ylabel(ejeV,'V (km/h)');
+ylim(ejeV,[0 1]); legend(ejeV,{'Consigna','Real'},'Location','northwest', ...
     'Color',[1 1 1], 'TextColor',[.15 .15 .15]);
 ejeW = nexttile(diseno); hold(ejeW,'on'); grid(ejeW,'on');
 lineaW = plot(ejeW,nan,nan,'Color',azul,'LineWidth',1.5);
 lineaWReal = plot(ejeW,nan,nan,'Color',naranja,'LineWidth',1.2);
-title(ejeW,'Velocidad angular'); xlabel(ejeW,'Tiempo (s)'); ylabel(ejeW,'omega (rad/s)');
-ylim(ejeW,[-.15 .15]); legend(ejeW,{'Orden','Odometria'},'Location','northwest', ...
+title(ejeW,'Direccion equivalente (izquierda: +)'); xlabel(ejeW,'Tiempo (s)'); ylabel(ejeW,'W (grados)');
+ylim(ejeW,[-3 3]); legend(ejeW,{'Consigna','Real'},'Location','northwest', ...
     'Color',[1 1 1], 'TextColor',[.15 .15 .15]);
 
 reloj = tic;
@@ -273,7 +275,14 @@ try
         w = max(-v*tan(giroMaximo)/batalla,min(v*tan(giroMaximo)/batalla,w));
         orden = cero; orden.linear.x = v; orden.angular.z = w;
         if iniciado, send(publicador,orden); end
-        historial(end+1,:) = [ahora,3.6*v,3.6*vReal,w,wReal]; %#ok<SAGROW>
+        direccion = 0;
+        if v > 0, direccion = rad2deg(atan(batalla*w/v)); end
+        % La direccion real es equivalente por odometria; en reposo no se puede estimar.
+        direccionReal = nan;
+        if all(isfinite([vReal wReal])) && abs(vReal) >= 0.05
+            direccionReal = rad2deg(atan(batalla*wReal/vReal));
+        end
+        historial(end+1,:) = [ahora,3.6*v,3.6*vReal,direccion,direccionReal]; %#ok<SAGROW>
         historial = historial(historial(:,1) >= ahora-30,:);
         if ahora-ultimoDibujo >= 0.1
             if ~isempty(distancias)
@@ -291,7 +300,7 @@ try
             xlim(ejeV,[max(0,ahora-30) max(5,ahora)]); xlim(ejeW,ejeV.XLim);
             limites = [max(1,ceil(1.15*max([0 sonares(isfinite(sonares))])*2)/2), ...
                 max(1,ceil(1.2*max(historial(:,2:3),[],'all','omitnan')*2)/2), ...
-                max(.15,ceil(1.2*max(abs(historial(:,4:5)),[],'all','omitnan')*20)/20)];
+                max(3,ceil(1.2*max(abs(historial(:,4:5)),[],'all','omitnan')))];
             ejes = [ejeSonar ejeV ejeW];
             for i = 1:3
                 actual = ejes(i).YLim(2);
@@ -325,9 +334,10 @@ try
             elseif obstaculo
                 estado.String = 'Autonomo: detenido ante un obstaculo. No realiza adelantamientos.';
             elseif modo == 1
-                estado.String = sprintf('Manual | v = %.1f km/h | omega = %.2f rad/s',3.6*v,w);
+                estado.String = sprintf('Manual | Consigna: V = %.1f km/h | W = %.1f grados',3.6*v,direccion);
             else
-                estado.String = sprintf('Autonomo | vuelta = %.0f %% | v = %.1f km/h',100*avance/longitudVuelta,3.6*v);
+                estado.String = sprintf('Autonomo | vuelta = %.0f %% | Consigna: V = %.1f km/h | W = %.1f grados', ...
+                    100*avance/longitudVuelta,3.6*v,direccion);
             end
             ultimoDibujo = ahora;
         end
