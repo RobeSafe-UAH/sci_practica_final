@@ -31,7 +31,7 @@ longitud = valores{2}(1); altura = valores{2}(2);
 radio = valores{2}(3); ancho = valores{2}(4);
 batalla = valores{3}(1); giroMaximo = deg2rad(min(30, valores{3}(2)));
 velocidadMaxima = min(50/3.6, valores{3}(3));
-maximoManual = min(6, 3.6*velocidadMaxima);
+maximoManual = min(10, 3.6*velocidadMaxima);
 trafico = valores{4}(1); velocidadTrafico = valores{4}(2);
 lidarX = valores{5}(1); lidarY = valores{5}(2); alcance = valores{5}(3);
 assert(periodo > 0 && isfinite(periodo) && batalla > 0 && giroMaximo > 0 && ...

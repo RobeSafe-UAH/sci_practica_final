@@ -13,7 +13,7 @@ hide:
     make build
     ```
 
-3. Para comenzar la práctica sin tráfico, abrir **`docker/config/scenario.yaml`** y poner **`count: 0` dentro de `traffic:`**. Lanzar la simulación desde esa misma terminal:
+3. Lanzar la simulación desde esa misma terminal:
 
     ```bash
     make run

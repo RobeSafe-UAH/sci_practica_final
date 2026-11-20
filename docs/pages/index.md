@@ -15,7 +15,32 @@ hide:
         sudo apt install -y git make
         ```
 
-    2. Instalar Docker Engine y Compose siguiendo la [guía oficial de Ubuntu](https://docs.docker.com/engine/install/ubuntu/) o la [guía de la distribución utilizada](https://docs.docker.com/engine/install/).
+    2. Instalar Docker Engine y Compose:
+
+    ```powershell
+        # Add Docker's official GPG key:
+        sudo apt update
+        sudo apt install ca-certificates curl
+        sudo install -m 0755 -d /etc/apt/keyrings
+        sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        sudo chmod a+r /etc/apt/keyrings/docker.asc
+        
+        # Add the repository to Apt sources:
+        sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+        Types: deb
+        URIs: https://download.docker.com/linux/ubuntu
+        Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+        Components: stable
+        Architectures: $(dpkg --print-architecture)
+        Signed-By: /etc/apt/keyrings/docker.asc
+        EOF
+        
+        sudo apt update
+        ```
+
+        ```powershell
+        sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        ```
 
     3. Habilitar Docker para el usuario:
 
@@ -180,7 +205,7 @@ hide:
     ```
 
     `make run` lee este archivo. Usar el mismo valor en MATLAB y en la
-    configuración ROS 2 del modelo Simulink, como indica [MATLAB](matlab.md).
+    configuración ROS 2 del modelo Simulink.
     Si se modifica con la simulación en marcha, detenerla con **Ctrl+C** y
     volver a ejecutar `make run` para crear el contenedor con el nuevo dominio.
 3. Construir la imagen:
