@@ -37,16 +37,15 @@ MATLAB y Simulink se ejecutan en el equipo del alumno y se comunican por ROS2 co
 
 5. Abrir el modelo de Simulink.
 
-Desde MATLAB, acceder a la carpeta matlab/ y abrir el archivo ackerman_ROS2_controller.slx.
+    Desde MATLAB, acceder a la carpeta matlab/ y abrir el archivo ackerman_ROS2_controller.slx.
 
 6. Configurar el dominio ROS 2 en Simulink.
 
-Dentro del modelo, hacer doble clic sobre uno de los bloques ROS 2 Subscribe. En la ventana de configuración del bloque, seleccionar Configure ROS 2 Domain ID and ROS Middleware (RMW).
+    Dentro del modelo, hacer doble clic sobre uno de los bloques ROS 2 Subscribe. En la ventana de configuración del bloque, seleccionar Configure ROS 2 Domain ID and ROS Middleware (RMW).
 
-En la ventana que aparece, introducir el identificador asignado a la pareja de laboratorio en el campo Domain ID (ROS 2) y aceptar los cambios.
+    En la ventana que aparece, introducir el identificador asignado a la pareja de laboratorio en el campo Domain ID (ROS 2) y aceptar los cambios.
 
-Este identificador debe coincidir con el configurado anteriormente en Docker y MATLAB.
-
+    Este identificador debe coincidir con el configurado anteriormente en Docker y MATLAB.
 
 7. Con el simulador en marcha, comprobar los topics desde MATLAB. Sustituir `22` por el dominio elegido:
 
@@ -74,7 +73,6 @@ Este identificador debe coincidir con el configurado anteriormente en Docker y M
     | **Manual** | Mantener **↑** para avanzar y **←/→** para girar. Soltar **↑** o pulsar **↓** frena; **espacio** pausa. Velocidad de **0–50 km/h**, ajustable con el deslizador; inicialmente **4 km/h**. |
     | **Autónomo** | Sigue el carril derecho a baja velocidad y se detiene después de una vuelta. Lee la geometría de `docker/config/scenario.yaml`. |
 
-
 3. Observar los cuatro paneles:
 
     | Panel | Información |
@@ -97,14 +95,12 @@ Este identificador debe coincidir con el configurado anteriormente en Docker y M
 
 2. Elegir los sonares necesarios; **no es obligatorio utilizar los ocho**. La plantilla conecta `sonar_0`, `sonar_1`, …, `sonar_7`, desde el lado derecho hasta el izquierdo, en metros. Para utilizar menos entradas, adaptar el Mux del modelo y conservar el mismo orden en el FIS. Los ángulos se consultan en [ROS2](topics.md#sonares).
 
-
 3. Definir **dos salidas en este orden**:
 
     | Posición | Salida | Significado | Rango |
     |---|---|---|---|
     | 1 | `V` | Velocidad solicitada. | **0–50 km/h** |
     | 2 | `W` | Ángulo de dirección equivalente del eje delantero; positivo hacia la izquierda. | **−45° a +45°** |
-
 
 4. Guardar el controlador como **`fuzzy_controller.fis`** en `matlab/`. El bloque **Controlador → Fuzzy Logic Controller** carga ese archivo. Si el sistema está en la variable `fis`, utilizar:
 
@@ -153,6 +149,5 @@ Este identificador debe coincidir con el configurado anteriormente en Docker y M
     gensim(net, 0.05)
     ```
 
-5. Guardar una copia del modelo y sustituir el controlador borroso por el bloque generado. Conectar la salida **Lidar** de **ROS Robot**, con **Data Type Conversion** a `double` y el preprocesamiento elegido. Mantener las dos salidas `[V; W]`, sus límites, la conversión a `Twist` y los bloques de parada y evaluación. 
-6. En `controller.m`, cambiar `modelo` al nombre de la copia neuronal. 
-
+4. Guardar una copia del modelo y sustituir el controlador borroso por el bloque generado. Conectar la salida **Lidar** de **ROS Robot**, con **Data Type Conversion** a `double` y el preprocesamiento elegido. Mantener las dos salidas `[V; W]`, sus límites, la conversión a `Twist` y los bloques de parada y evaluación.
+5. En `controller.m`, cambiar `modelo` al nombre de la copia neuronal.
