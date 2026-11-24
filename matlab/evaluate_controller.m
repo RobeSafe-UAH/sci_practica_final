@@ -1,7 +1,30 @@
 cd(fileparts(mfilename('fullpath')));
-r = load('data.mat', 'data');
+r = load('data.mat');
 assert(isfield(r,'data') && isnumeric(r.data) && ismatrix(r.data) && ...
     size(r.data,1)>=8, 'data.mat debe contener una matriz data con al menos ocho filas.');
+% Conservar el estado de colisión junto al registro para evaluaciones posteriores.
+if ~isfield(r,'colisionEvaluacion')
+    colisionEvaluacion = NaN;
+    registro = dir('data.mat');
+    edadRegistro = (now-registro.datenum)*86400;
+    % No atribuir el estado del simulador actual a un registro antiguo.
+    if edadRegistro >= -1 && edadRegistro <= 30
+        try
+            nodoColision = ros2node('/matlab_evaluacion_colision');
+            subColision = ros2subscriber(nodoColision, '/r0/collision', ...
+                'std_msgs/Bool', 'Reliability', 'reliable');
+            [mensajeColision, recibidoColision] = receive(subColision, 3);
+            if recibidoColision
+                colisionEvaluacion = double(mensajeColision.data);
+            end
+        catch
+            % La figura indicará que no se pudo comprobar la colisión.
+        end
+        clear subColision nodoColision;
+    end
+    r.colisionEvaluacion = colisionEvaluacion;
+    save('data.mat', 'colisionEvaluacion', '-append');
+end
 data = r.data;
 data = data(:, all(isfinite(data([1 2 3 7 8],:)), 1));
 if isempty(data), error('No hay muestras validas para evaluar.'); end
@@ -41,13 +64,41 @@ for k = 1:numel(muestras)
 end
 vuelta = 100*max(0,min(1,sum(mod(diff(avance)+L/2,L)-L/2)/L));
 
+invasion = 100*sum(dt.*invade)/max(T,eps);
+colisionConocida = isfield(r,'colisionEvaluacion') && ...
+    isnumeric(r.colisionEvaluacion) && isscalar(r.colisionEvaluacion) && ...
+    isfinite(r.colisionEvaluacion) && any(r.colisionEvaluacion == [0 1]);
+colision = colisionConocida && r.colisionEvaluacion == 1;
+vueltaFinalizada = vuelta >= 99 && colisionConocida && ~colision;
+
 estadisticas = struct('tiempoTotal_s', T, 'vuelta_pct', vuelta, ...
     'tiempoInvasion_s', sum(dt.*invade), ...
-    'invasion_pct', 100*sum(dt.*invade)/max(T,eps), ...
+    'invasion_pct', invasion, ...
     'velMin_kmh', min(v), 'velMedia_kmh', sum(pesos.*v), 'velMax_kmh', max(v), ...
     'volanteMin_deg', min(volante), 'volanteMedia_deg', sum(pesos.*volante), ...
     'volanteMax_deg', max(volante));
-disp(estadisticas);
+if vueltaFinalizada
+    % Escalas lineales acotadas: 15–120 s y 10–80 % de invasión.
+    puntosTiempo = 5*max(0,min(1,(120-T)/(120-15)));
+    puntosInvasion = 5*max(0,min(1,(80-invasion)/(80-10)));
+    nota = puntosTiempo+puntosInvasion;
+    estadisticas.puntosTiempo = puntosTiempo;
+    estadisticas.puntosInvasion = puntosInvasion;
+    estadisticas.notaOrientativa = nota;
+    tituloNota = sprintf('Nota orientativa: %.2f / 10',nota);
+    detalleNota = sprintf('Tiempo: %.2f / 5  ·  Invasión: %.2f / 5', ...
+        puntosTiempo,puntosInvasion);
+else
+    tituloNota = 'Vuelta no finalizada';
+    if colision
+        detalleNota = 'Colisión detectada.';
+    elseif ~colisionConocida && vuelta >= 99
+        detalleNota = 'No se pudo comprobar el estado de colisión.';
+    else
+        detalleNota = 'No se ha completado la vuelta.';
+    end
+end
+estadisticas.estado = tituloNota;
 
 azul = [0.13 0.35 0.58]; rojo = [0.70 0.20 0.19];
 texto = [0.12 0.18 0.25]; gris = [0.43 0.47 0.51];
@@ -62,6 +113,10 @@ annotation(fig,'textbox',[0.045 0.895 0.91 0.025], ...
     'String','SCI  ·  Circuito 40 × 26 m  ·  Sentido antihorario', ...
     'FontName','Arial','FontSize',10,'Color',gris,'EdgeColor','none','Margin',0);
 annotation(fig,'line',[0.045 0.955],[0.88 0.88],'Color',[0.80 0.83 0.86]);
+annotation(fig,'textbox',[0.62 0.91 0.335 0.035], ...
+    'String',tituloNota, ...
+    'HorizontalAlignment','right','FontName','Arial','FontSize',15, ...
+    'FontWeight','bold','Color',azul,'EdgeColor','none','Margin',0);
 etiquetas = {'Tiempo total','Vuelta recorrida','Carril contrario'};
 valores = {sprintf('%.2f s',T),sprintf('%.1f %%',vuelta), ...
     sprintf('%.1f %%',estadisticas.invasion_pct)};
@@ -131,5 +186,5 @@ for ax = [trayectoria velocidad direccion]
     grid(ax,'on');
 end
 annotation(fig,'textbox',[0.045 0.018 0.91 0.025], ...
-    'String','Velocidad y dirección corresponden a las consignas del controlador.', ...
+    'String',detalleNota, ...
     'FontName','Arial','FontSize',9,'Color',gris,'EdgeColor','none','Margin',0);
