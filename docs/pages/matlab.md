@@ -122,7 +122,7 @@ MATLAB y Simulink se ejecutan en el equipo del alumno y se comunican por ROS2 co
     El script espera hasta **3 segundos** para recibir `/r0/odom` con QoS **Best Effort**. Si recibe odometría, inicia Simulink; si no, muestra un error.
 
 3. El modelo principal termina al completar una vuelta, recibir una colisión o alcanzar **200 s de simulación**. También se puede pulsar **Stop** en Simulink. El contenedor permanece en ejecución; reiniciarlo antes de cada nuevo ensayo.
-4. Consultar la figura de evaluación: duración, porcentaje de vuelta, invasión del carril contrario, trayectoria y consignas de velocidad y dirección. Para abrir de nuevo el último registro:
+4. Consultar la figura de evaluación: duración, porcentaje de vuelta, invasión del carril contrario, trayectoria y consignas. Si se recorre al menos el 99 % de la vuelta y se confirma que no hubo colisión, aparece una puntuación orientativa sobre 10. Suma hasta 5 puntos por tiempo (5 a 15 s o menos, 0 a 120 s o más) y hasta 5 por invasión (5 al 10 % o menos, 0 al 80 % o más), interpolando linealmente entre los extremos. En otro caso aparece «Vuelta no finalizada»; si no se pudo leer el estado de colisión, se indica en la figura. La evaluación guarda dicho estado en `data.mat` para poder volver a abrirla. Los adelantamientos deben verificarse por separado. Para abrir de nuevo el último registro:
 
     ```matlab
     evaluate_controller
