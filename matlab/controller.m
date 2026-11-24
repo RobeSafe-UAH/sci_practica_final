@@ -19,8 +19,6 @@ try
     nodo = ros2node('/matlab_controller_comprobacion',dominioROS2);
     odom = ros2subscriber(nodo, topicOdom, 'nav_msgs/Odometry', ...
                           'Reliability', 'besteffort');
-    fprintf('Esperando odometria ROS 2 en %s (dominio %d)...\n', ...
-            topicOdom, dominioROS2);
     [~, recibido, estado] = receive(odom, tiempoEspera);
 catch errorROS2
     clear odom nodo;
@@ -36,7 +34,6 @@ if ~recibido
 end
 
 %% 3. EJECUTAR EL CONTROLADOR DE SIMULINK
-fprintf('Odometria recibida. Iniciando %s...\n', modelo);
 sim(modelo);
 
 %% 4. EVALUAR EL RESULTADO
@@ -55,6 +52,3 @@ else
     warning(['No se encontro data.mat. Revisa el bloque To File ' ...
              'del subsistema de evaluacion en Simulink.']);
 end
-
-%% 5. FIN
-fprintf('Simulacion finalizada.\n');
