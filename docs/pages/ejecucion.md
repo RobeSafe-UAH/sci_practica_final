@@ -50,7 +50,8 @@ Continuar con la [exploración de sensores en MATLAB](matlab.md#2-explorar-senso
     [guía ROS2](topics.md).
     - El controlador de [MATLAB](matlab.md) se ejecuta
     en el equipo con ese mismo dominio.
-5. Salir de esta terminal sin detener el simulador:
+
+4. Salir de esta terminal sin detener el simulador:
 
     ```bash
     exit
