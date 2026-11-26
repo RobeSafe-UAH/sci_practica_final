@@ -41,9 +41,9 @@ MATLAB y Simulink se ejecutan en el equipo del alumno y se comunican por ROS2 co
 
 6. Configurar el dominio ROS 2 en Simulink.
 
-    Dentro del modelo, hacer doble clic sobre uno de los bloques ROS 2 Subscribe. En la ventana de configuración del bloque, seleccionar Configure ROS 2 Domain ID and ROS Middleware (RMW).
+    Dentro del modelo, hacer doble clic sobre uno de los bloques ROS 2 Subscribe. En la ventana de configuración del bloque, seleccionar **Configure ROS 2 Domain ID and ROS Middleware (RMW)**.
 
-    En la ventana que aparece, introducir el identificador asignado a la pareja de laboratorio en el campo Domain ID (ROS 2) y aceptar los cambios.
+    En la ventana que aparece, introducir el identificador asignado a la pareja de laboratorio en el campo **Domain ID (ROS 2)** y aceptar los cambios.
 
     Este identificador debe coincidir con el configurado anteriormente en Docker y MATLAB.
 
