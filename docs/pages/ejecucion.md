@@ -20,11 +20,11 @@ hide:
     ```
 
 4. Con el contenedor en ejecución, abrir [el simulador MVSim en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale) (http://localhost:6080/vnc.html?autoconnect=true&resize=scale).
-   - Pulsar **Connect** si aparece la bienvenida.
+     - Pulsar **Connect** si aparece la bienvenida.
      - La ventana de MVSim se muestra dentro del navegador.
      
 5. Mantener la terminal abierta durante la práctica.
-   - Al terminar, pulsar **Ctrl+C** en la terminal donde se ejecutó `make run`: se detiene y elimina el contenedor.
+     - Al terminar, pulsar **Ctrl+C** en la terminal donde se ejecutó `make run`: se detiene y elimina el contenedor.
      - Para reiniciar la práctica desde la salida, ejecutar de nuevo `make run`.
 
 Continuar con la [exploración de sensores en MATLAB](matlab.md#2-explorar-sensores-y-velocidades).
