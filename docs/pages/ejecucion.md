@@ -19,8 +19,14 @@ hide:
     make run
     ```
 
-4. Con el contenedor en ejecución, abrir [el simulador MVSim en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale). Pulsar **Connect** si aparece la bienvenida. La ventana de MVSim se muestra dentro del escritorio del navegador.
-5. Mantener la terminal abierta durante la práctica. Al terminar, pulsar **Ctrl+C** en la terminal de `make run`: se detiene y elimina el contenedor. Para reiniciar la práctica desde la salida, ejecutar de nuevo `make run`. Continuar con la [exploración de sensores en MATLAB](matlab.md#2-explorar-sensores-y-velocidades).
+4. Con el contenedor en ejecución, abrir [el simulador MVSim en el navegador](http://localhost:6080/vnc.html?autoconnect=true&resize=scale) (http://localhost:6080/vnc.html?autoconnect=true&resize=scale).
+   - Pulsar **Connect** si aparece la bienvenida.
+   - La ventana de MVSim se muestra dentro del navegador.
+6. Mantener la terminal abierta durante la práctica.
+   - Al terminar, pulsar **Ctrl+C** en la terminal donde se ejecutó `make run`: se detiene y elimina el contenedor.
+   - Para reiniciar la práctica desde la salida, ejecutar de nuevo `make run`.
+
+Continuar con la [exploración de sensores en MATLAB](matlab.md#2-explorar-sensores-y-velocidades).
 
 ## Abrir una terminal del contenedor
 
@@ -38,10 +44,12 @@ hide:
     ```
 
     Debe coincidir con el valor guardado en **`docker/.env`** y con el que
-    muestra la terminal de `make run`. Ejecutar aquí los comandos de la
-    [guía ROS2](topics.md). El controlador de [MATLAB](matlab.md) se ejecuta
+    muestra la terminal de `make run`.
+    - En esta terminal es donde se deben ejecutar los comandos de la
+    [guía ROS2](topics.md).
+    - El controlador de [MATLAB](matlab.md) se ejecuta
     en el equipo con ese mismo dominio.
-4. Salir de esta terminal sin detener el simulador:
+5. Salir de esta terminal sin detener el simulador:
 
     ```bash
     exit
