@@ -204,14 +204,16 @@ hide:
     ROS_DOMAIN_ID=22
     ```
 
-    `make run` lee este archivo. Usar el mismo valor en MATLAB y en la
+    `make run` lee este archivo. Usar el mismo valor de ROS_DOMAIN_ID en MATLAB y en la
     configuración ROS 2 del modelo Simulink.
+   
     Si se modifica con la simulación en marcha, detenerla con **Ctrl+C** y
     volver a ejecutar `make run` para crear el contenedor con el nuevo dominio.
-3. Construir la imagen:
+   
+4. Construir la imagen:
 
     ```bash
     make build
     ```
 
-4. Continuar en [Ejecución](ejecucion.md).
+5. Continuar en [Ejecución](ejecucion.md).
