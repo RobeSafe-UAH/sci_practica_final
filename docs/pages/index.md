@@ -17,7 +17,7 @@ hide:
 
     2. Instalar Docker Engine y Compose:
 
-    ```powershell
+        ```powershell
         # Add Docker's official GPG key:
         sudo apt update
         sudo apt install ca-certificates curl
